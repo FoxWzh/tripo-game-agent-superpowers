@@ -6,17 +6,17 @@ FOX 应聘 Tripo Agent Product Manager 的游戏资产方向面试作品。
 
 ## 这是什么
 
-这是一个本地可安装的 Tripo Game Asset Agent demo。
+这是一个本地可安装的 Tripo Game Asset Agent。
 
-它不调用 Tripo API，也不伪装成真实 3D 生成工具。它展示的是：
+它会真实调用 Tripo API 生成游戏资产，同时保留 Superpowers 风格的流程控制。它展示的是：
 
 - 用户如何表达游戏资产目标
 - Agent 如何补齐 Unity / Unreal / Roblox / Godot 约束
 - Agent 如何生成制作方案、成本和风险
-- Agent 如何 mock 执行生成、优化、检查、修复、打包
+- Agent 如何真实调用 Tripo 生成、下载模型、检查、打包
 - Agent 如何把资产记忆保存为后续改稿和系列复用基础
 
-所有真实生成、优化、检查、导出步骤都标记 `[MOCK]`。
+不允许 mock 生成。没有 `TRIPO_API_KEY` 时不能运行真实生成。
 
 ## 快速体验
 
@@ -24,8 +24,48 @@ FOX 应聘 Tripo Agent Product Manager 的游戏资产方向面试作品。
 git clone https://github.com/FoxWzh/tripo-game-agent-superpowers.git
 cd tripo-game-agent-superpowers
 
-./bin/tripo-agent demo game-character
+./bin/tripo-agent setup
 ./bin/tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼"
+```
+
+## 真实生成
+
+先配置 API key 和依赖：
+
+```bash
+./bin/tripo-agent setup
+```
+
+`setup` 会：
+
+- 检查 `TRIPO_API_KEY`
+- 如果缺失，要求用户输入并保存到 `.env.local`
+- 检查 Node / npm / curl / zip / Blender
+- 如果 Node 依赖缺失，在确认后执行 `npm install`
+
+把参考图放到 `assets/` 后运行：
+
+```bash
+./bin/tripo-agent run \
+  --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" \
+  --input assets/mecha.png \
+  --engine Unity
+```
+
+执行结果会写到：
+
+```text
+workspace/
+outputs/<asset_id>/
+```
+
+也可以分步执行：
+
+```bash
+./bin/tripo-agent plan --prompt "Unity 里用的机甲角色，quad mesh，15k 面" --engine Unity
+./bin/tripo-agent generate --input assets/mecha.png
+./bin/tripo-agent inspect
+./bin/tripo-agent package-asset --engine unity
 ```
 
 ## 安装到 Claude Code
@@ -37,7 +77,6 @@ cd tripo-game-agent-superpowers
 然后在 Claude Code 中运行：
 
 ```text
-/tripo-agent demo game-character
 /tripo-agent ask "Unreal 里用的 boss 角色，需要 UE Manny 兼容骨骼"
 /tripo-agent ask "给上次那个角色加一套同风格盔甲和一把剑"
 /tripo-agent architecture
@@ -81,8 +120,11 @@ tripo-game-agent-superpowers/
 ├── bin/
 │   ├── tripo-agent
 │   └── tripo-agent.sh
-├── content/
-└── mocks/
+├── scripts/
+├── workspace/
+├── outputs/
+├── assets/
+└── content/
 ```
 
 ## Skill 分工
@@ -99,7 +141,7 @@ game-asset-intake
   -> game-asset-memory
 ```
 
-它规定不能跳过 planning，不能在 readiness 之前打包，mock 边界必须显式暴露。
+它规定不能跳过 planning，不能在 readiness 之前打包，且禁止 mock 生成。
 
 ### `game-asset-intake`
 
@@ -122,7 +164,7 @@ game-asset-intake
 
 ### `game-asset-production`
 
-负责生成和优化阶段的 mock/真实系统映射：
+负责生成和优化阶段的真实系统映射：
 
 - ImageTo3D / TextTo3D / MultiViewTo3D
 - Retopo
@@ -157,12 +199,12 @@ game-asset-intake
 
 ## 面试官 5 分钟路径
 
-1. 跑 `/tripo-agent demo game-character`，看完整 Unity-ready 角色资产流程。
-2. 跑 `/tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面"`，看自然语言 intake 和 planning。
-3. 看 `skills/using-tripo-game-agent/SKILL.md`，理解为什么这是 Superpowers 风格。
-4. 看 `skills/game-asset-readiness/SKILL.md`，理解为什么“生成模型”不等于“游戏可用资产”。
+1. 跑 `./bin/tripo-agent setup`，配置 API key 和依赖。
+2. 跑 `./bin/tripo-agent run --prompt "Unity 里用的机甲角色，quad mesh，15k 面" --input assets/mecha.png --engine Unity`，真实生成。
+3. 看 `outputs/<asset_id>/readiness_report.md`，理解为什么“生成模型”不等于“游戏可用资产”。
+4. 看 `skills/using-tripo-game-agent/SKILL.md`，理解为什么这是 Superpowers 风格。
 
-## 打包
+## 分发打包
 
 ```bash
 ./bin/tripo-agent package
@@ -176,8 +218,8 @@ dist/tripo-game-agent-superpowers.zip
 
 ## 录屏建议
 
-1. 开场 10 秒：说明这是 Tripo 游戏资产 Agent 的 Superpowers demo。
-2. 60 秒：跑 `/tripo-agent demo game-character`，重点展示 intake、planning、readiness。
-3. 30 秒：跑 `/tripo-agent ask "给上次角色加同风格盔甲"`，展示 modular / memory。
-4. 20 秒：打开 `using-tripo-game-agent`，说明流程控制。
-5. 20 秒：打开 `game-asset-readiness`，强调 PM 判断：产物可用性高于单步生成能力。
+1. 开场 10 秒：说明这是 Tripo 游戏资产 Agent 的 Superpowers 实执行版本。
+2. 40 秒：跑 `setup` 和 `doctor`，展示 API key/依赖检查。
+3. 60 秒：跑 `run`，展示 Tripo task 创建、轮询、下载。
+4. 30 秒：打开 readiness report 和 package zip。
+5. 20 秒：打开 `using-tripo-game-agent`，说明流程控制。

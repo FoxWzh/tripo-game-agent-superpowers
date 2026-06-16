@@ -16,11 +16,12 @@ Do not answer game asset requests directly from this file alone.
 
 ## Product Boundary
 
-This is a local portfolio demo, not a real Tripo API integration.
+This is a local portfolio project with a real Tripo API execution path.
 
-- All generation, optimization, inspection, repair, export, and packaging steps must be marked `[MOCK]`.
-- The demo shows product architecture above generation capability: intent intake, workflow planning, production orchestration, game-readiness review, fallback policy, packaging, and asset memory.
-- Cost and time numbers are estimated for product discussion, not billing facts.
+- Do not mock generation.
+- If `TRIPO_API_KEY` or dependencies are missing, run `./bin/tripo-agent setup` or `./bin/tripo-agent doctor` before generation.
+- Do not claim generation succeeded unless real files exist under `outputs/<asset_id>/`.
+- Cost and time numbers are estimates until the Tripo task result is available.
 
 ## Core Workflow
 
@@ -35,6 +36,27 @@ game-asset-intake
 ```
 
 The skills are mandatory workflow modules, not optional references. If information is insufficient at intake, ask clarification questions and stop before planning.
+
+## Real Execution Commands
+
+For real generation, use:
+
+```bash
+./bin/tripo-agent setup
+./bin/tripo-agent run --prompt "<game asset request>" --input assets/<reference-image>.png --engine Unity
+```
+
+The real execution path writes:
+
+```text
+workspace/asset_brief.json
+workspace/production_plan.json
+workspace/generation_request.json
+workspace/production_result.json
+workspace/readiness_report.json
+workspace/package_result.json
+outputs/<asset_id>/
+```
 
 ## Interview Positioning
 

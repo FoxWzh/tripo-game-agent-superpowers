@@ -1,2 +1,10 @@
 dist/
+node_modules/
+.env
+.env.local
+workspace/*.json
+outputs/*
+!outputs/.gitkeep
+assets/*
+!assets/.gitkeep
 .DS_Store

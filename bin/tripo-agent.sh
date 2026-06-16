@@ -9,8 +9,14 @@ usage() {
 Tripo Game Agent Superpowers portfolio demo
 
 Usage:
+  tripo-agent setup
+  tripo-agent doctor
   tripo-agent install
-  tripo-agent demo game-character
+  tripo-agent plan --prompt "<游戏资产需求>" [--input assets/ref.png]
+  tripo-agent generate --input assets/ref.png
+  tripo-agent inspect
+  tripo-agent package-asset [--engine unity]
+  tripo-agent run --prompt "<游戏资产需求>" --input assets/ref.png [--engine Unity]
   tripo-agent ask "<游戏资产需求>"
   tripo-agent stories [id]
   tripo-agent architecture [skill-pool|composite|routing|eval]
@@ -29,7 +35,6 @@ onboarding() {
 CLAUDE.md 是启动指令，using-tripo-game-agent 是 bootstrap skill，game-asset-* 是游戏资产能力模块。
 
 建议走查路径：
-- /tripo-agent demo game-character
 - /tripo-agent ask "<你的游戏资产需求>"
 - /tripo-agent stories
 - /tripo-agent architecture
@@ -38,8 +43,11 @@ CLAUDE.md 是启动指令，using-tripo-game-agent 是 bootstrap skill，game-as
 - /tripo-agent about
 
 本地离线预览：
-- ./bin/tripo-agent demo game-character
 - ./bin/tripo-agent ask "Unity 里用的机甲，quad mesh，15k 面"
+
+真实生成：
+- ./bin/tripo-agent setup
+- ./bin/tripo-agent run --prompt "Unity 里用的机甲角色，quad mesh，15k 面" --input assets/mecha.png --engine Unity
 EOF
 }
 
@@ -51,164 +59,10 @@ install_command() {
   $HOME/.claude/commands/tripo-agent.md
 
 现在可以在 Claude Code 中运行：
-  /tripo-agent demo game-character
   /tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面"
 
 如果你使用 Codex plugin UI，也可以导入整个目录：
   $ROOT
-EOF
-}
-
-demo_game_character() {
-  cat <<'EOF'
-# /tripo-agent demo game-character
-
-这是一段 [MOCK] 产品演示，不调用 Tripo API。目标是展示 Tripo Game Agent Superpowers 如何把游戏资产目标翻译成可执行工作流。
-
-## 1. 用户意图
-
-用户说：
-
-> 我有一张机甲角色概念图，想在 Unity 里用。
-
-## 2. using-tripo-game-agent 启动
-
-```json
-{
-  "stage": "intake",
-  "skill_order": [
-    "game-asset-intake",
-    "game-asset-planning",
-    "game-asset-production",
-    "game-asset-readiness",
-    "game-asset-memory"
-  ],
-  "rule": "do_not_skip_planning_or_readiness"
-}
-```
-
-## 3. game-asset-intake / Asset Brief
-
-```json
-{
-  "persona": "Marcus / 独立游戏美术",
-  "downstream_target": "Unity",
-  "recommended_workflow": "GameReadyCharacter",
-  "tags": {
-    "format": "FBX",
-    "topology": "quad",
-    "poly_budget": "15k",
-    "texture": "PBR metal-rough",
-    "rig": "humanoid"
-  },
-  "confidence": 0.86
-}
-```
-
-为什么不是直接 ImageTo3D：
-
-- Unity 是下游场景，不是导出格式本身。
-- "能在 Unity 用"隐含 rig、PBR、FBX、拓扑预算和导入说明。
-- 用户不应该自己知道 Retopo、UV、Rig 的顺序。
-
-## 4. Agent 主动澄清
-
-1. 目标面数按 15k 走，还是更偏手游的 8k？
-2. 是否需要标准 humanoid rig，方便直接接 Unity Animator？
-
-本 demo 采用：15k + humanoid rig。
-
-## 5. game-asset-planning / Production Plan
-
-```text
-GameReadyCharacter
-ImageTo3D
-  -> Retopo(mode=quad, target=15k)
-  -> Segment
-  -> UVUnwrap
-  -> PBRTexture(workflow=metal-rough)
-  -> Rig(type=humanoid)
-  -> ExportFBX(textures=zip)
-```
-
-## 6. 执行前成本透明
-
-| 档位 | 内容 | 预计 credit | 预计时间 |
-| --- | --- | ---: | ---: |
-| Draft | ImageTo3D + GLB preview | 6 | 2-3 min |
-| No-rig | 到 PBR + FBX，不绑骨 | 27 | 6-8 min |
-| Full | PBR + humanoid rig + FBX zip | 34 | 8-12 min |
-
-Full 估算拆分：
-
-- ImageTo3D: 6 credits
-- Retopo: 10 credits
-- UV + PBRTexture: 9 credits
-- Rig: 7 credits
-- Export packaging: 2 credits
-
-## 7. game-asset-production / [MOCK] 执行可观测
-
-```text
-[MOCK] Step 1/7 ImageTo3D started. Estimated 90s. Reserved 6 credits.
-[MOCK] Step 1/7 ImageTo3D completed. Preview GLB ready.
-[MOCK] Step 2/7 Retopo(mode=quad,target=15k) completed. Mesh budget: 14.8k faces.
-[MOCK] Step 3/7 Segment completed. Parts: head, torso, arms, legs, armor plates.
-[MOCK] Step 4/7 UVUnwrap completed. UV overlap risk: low.
-[MOCK] Step 5/7 PBRTexture(workflow=metal-rough) timed out after 90s.
-[MOCK] Agent fallback: retry once because texture is critical for Unity import.
-[MOCK] Retry still unstable. Agent decision: downgrade from 4K PBR to 2K PBR to protect delivery certainty and credit burn.
-[MOCK] Step 5/7 PBRTexture completed with 2K maps.
-[MOCK] Step 6/7 Rig(type=humanoid) completed. Unity humanoid mapping generated.
-[MOCK] Step 7/7 ExportFBX(textures=zip) completed.
-```
-
-## 8. game-asset-readiness / [MOCK] 可用性检查
-
-```text
-[MOCK] Polycount check passed: 14.8k / target 15k.
-[MOCK] UV overlap check passed: low risk.
-[MOCK] PBR maps present: basecolor, normal, metallic_roughness, ao.
-[MOCK] Unity humanoid mapping passed with warning: shoulder armor may clip.
-[MOCK] Scale check passed: meter.
-[MOCK] Pivot check passed: bottom center.
-[MOCK] Unity import smoke test passed.
-```
-
-## 9. [MOCK] 产物交付
-
-```text
-mecha_marcus_unity_fbx.zip
-├── mecha_marcus.fbx
-├── textures/
-│   ├── basecolor_2k.png
-│   ├── normal_2k.png
-│   ├── metallic_roughness_2k.png
-│   └── ao_2k.png
-├── rig/
-│   └── humanoid_mapping.json
-└── report/
-    ├── cost_breakdown.md
-    ├── import_unity.md
-    └── fallback_log.md
-```
-
-## 10. game-asset-memory / 系列复用记录
-
-```json
-{
-  "series_id": "mecha_unity_demo",
-  "engine": "Unity",
-  "poly_budget": "15k",
-  "texture_policy": "PBR 2K metal-rough",
-  "rig_policy": "Unity humanoid",
-  "fallback_history": ["PBR 4K timeout -> 2K fallback"]
-}
-```
-
-## 11. 产品判断
-
-Studio 里用户要自己理解 Image-to-3D、Retopo、UV、PBR、Rig、Readiness、Export 的先后关系。Game Agent 的价值不是替代生成模型，而是把游戏引擎约束变成稳定的资产生产协议。
 EOF
 }
 
@@ -457,10 +311,10 @@ PPT 只能描述方案；这个 Superpowers 风格插件能让面试官亲手体
 
 ## 2 分钟导览
 
-1. 运行 `/tripo-agent demo game-character`：看一次完整 Unity-ready 角色资产流程。
-2. 运行 `/tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面"`：看自由输入解析。
-3. 打开 `skills/using-tripo-game-agent/SKILL.md`：看 Superpowers bootstrap。
-4. 打开 `skills/game-asset-readiness/SKILL.md`：看游戏可用性验收。
+1. 运行 `./bin/tripo-agent setup`：配置 Tripo API key 和依赖。
+2. 运行 `./bin/tripo-agent run --prompt "Unity 里用的机甲角色，quad mesh，15k 面" --input assets/mecha.png --engine Unity`：真实生成。
+3. 打开 `outputs/<asset_id>/readiness_report.md`：看游戏可用性验收。
+4. 打开 `skills/using-tripo-game-agent/SKILL.md`：看 Superpowers bootstrap。
 
 Blog: https://foxwzh.github.io
 EOF
@@ -470,8 +324,69 @@ package_command() {
   mkdir -p "$ROOT/dist"
   local out="$ROOT/dist/tripo-game-agent-superpowers.zip"
   rm -f "$out"
-  (cd "$ROOT/.." && zip -qr "$out" "tripo-game-agent-superpowers" -x "tripo-game-agent-superpowers/dist/*" -x "tripo-game-agent-superpowers/.git/*")
+  (cd "$ROOT/.." && zip -qr "$out" "tripo-game-agent-superpowers" \
+    -x "tripo-game-agent-superpowers/dist/*" \
+    -x "tripo-game-agent-superpowers/.git/*" \
+    -x "tripo-game-agent-superpowers/node_modules/*" \
+    -x "tripo-game-agent-superpowers/workspace/*.json" \
+    -x "tripo-game-agent-superpowers/outputs/*" \
+    -x "tripo-game-agent-superpowers/assets/*" \
+    -x "tripo-game-agent-superpowers/.env" \
+    -x "tripo-game-agent-superpowers/.env.local")
   echo "已生成作品包：$out"
+}
+
+setup_command() {
+  (cd "$ROOT" && node scripts/setup.mjs)
+}
+
+doctor_command() {
+  (cd "$ROOT" && node scripts/doctor.mjs "$@")
+}
+
+plan_command() {
+  (cd "$ROOT" && node scripts/plan_game_asset.mjs "$@")
+}
+
+generate_command() {
+  (cd "$ROOT" && node scripts/generate_game_asset.mjs "$@")
+}
+
+inspect_command() {
+  (cd "$ROOT" && node scripts/inspect_game_asset.mjs "$@")
+}
+
+package_asset_command() {
+  (cd "$ROOT" && node scripts/package_engine_asset.mjs "$@")
+}
+
+run_command() {
+  local args=("$@")
+  (cd "$ROOT" && node scripts/doctor.mjs)
+  (cd "$ROOT" && node scripts/plan_game_asset.mjs "${args[@]}")
+
+  local input_args=()
+  local engine_args=()
+  local i=0
+  while [[ $i -lt ${#args[@]} ]]; do
+    case "${args[$i]}" in
+      --input|--input-url)
+        input_args+=("${args[$i]}" "${args[$((i+1))]}")
+        i=$((i+2))
+        ;;
+      --engine)
+        engine_args+=("--engine" "${args[$((i+1))]}")
+        i=$((i+2))
+        ;;
+      *)
+        i=$((i+1))
+        ;;
+    esac
+  done
+
+  (cd "$ROOT" && node scripts/generate_game_asset.mjs "${input_args[@]}")
+  (cd "$ROOT" && node scripts/inspect_game_asset.mjs)
+  (cd "$ROOT" && node scripts/package_engine_asset.mjs "${engine_args[@]}")
 }
 
 case "$COMMAND" in
@@ -484,13 +399,32 @@ case "$COMMAND" in
   install)
     install_command
     ;;
-  demo)
-    if [[ "${2:-}" == "game-character" ]]; then
-      demo_game_character
-    else
-      echo "支持的 demo: game-character"
-      exit 1
-    fi
+  setup)
+    setup_command
+    ;;
+  doctor)
+    shift
+    doctor_command "$@"
+    ;;
+  plan)
+    shift
+    plan_command "$@"
+    ;;
+  generate)
+    shift
+    generate_command "$@"
+    ;;
+  inspect)
+    shift
+    inspect_command "$@"
+    ;;
+  package-asset)
+    shift
+    package_asset_command "$@"
+    ;;
+  run)
+    shift
+    run_command "$@"
     ;;
   ask)
     shift

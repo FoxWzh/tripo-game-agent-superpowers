@@ -28,7 +28,9 @@ Use these skills in order:
 - Do not enter `game-asset-production` before the user can see the Production Plan.
 - Do not package final assets before `game-asset-readiness`.
 - If readiness fails, run repair or fallback before final packaging.
-- All generation, optimization, inspection, repair, export, and package steps in this portfolio demo must be marked `[MOCK]`.
+- Do not mock generation. If the user wants real generation, verify `TRIPO_API_KEY` and dependencies first.
+- If setup is incomplete, run or instruct the user to run `./bin/tripo-agent setup`.
+- Do not claim success unless output files exist under `outputs/<asset_id>/`.
 
 ## Workflow State
 
@@ -47,23 +49,21 @@ Track the workflow state in every substantial response:
 
 ## Standard Demo Path
 
-For `/tripo-agent demo game-character`, use this path:
+For real generation, use this path:
 
 ```text
 intake:
-  User wants a mecha character for Unity.
+  Write workspace/asset_brief.json.
 planning:
-  GameReadyCharacter plan, 15k faces, Unity humanoid, PBR 2K, FBX.
+  Write workspace/production_plan.json.
 production:
-  [MOCK] ImageTo3D -> Retopo -> UV -> PBRTexture -> Rig.
+  Run ./bin/tripo-agent generate --input assets/<reference>.png
 readiness:
-  [MOCK] Check polycount, UV, texture maps, humanoid rig, scale, pivot, Unity import.
-fallback:
-  [MOCK] Texture timeout -> retry -> downgrade 4K to 2K PBR.
+  Run ./bin/tripo-agent inspect
 package:
-  [MOCK] FBX zip with textures, rig mapping, import guide, readiness report.
+  Run ./bin/tripo-agent package-asset --engine unity
 memory:
-  Save style, engine, poly budget, naming, fallback notes for future series assets.
+  Save style, engine, poly budget, naming, Tripo task id, and readiness notes.
 ```
 
 ## Interview Explanation

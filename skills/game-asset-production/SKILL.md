@@ -1,17 +1,17 @@
 ---
 name: game-asset-production
-description: Use after planning to execute or mock the game asset generation and optimization workflow, including model generation, retopo, UV, PBR, rig, LOD, pivot, scale, and collider preparation.
+description: Use after planning to execute the real Tripo game asset generation workflow, including image-to-model generation, downloads, and local production result files.
 ---
 
 # Game Asset Production
 
 Use this skill only after a Production Plan exists.
 
-In this portfolio demo, every production action is `[MOCK]`. In a real product, these actions map to Tripo APIs, internal asset processors, Blender automation, or engine import tools.
+This skill has a real Tripo API execution path. Do not mock generation.
 
 ## Input
 
-Production Plan from `game-asset-planning`.
+Production Plan from `game-asset-planning`, written to `workspace/production_plan.json`.
 
 ## Output: Production Result
 
@@ -27,30 +27,23 @@ Production Plan from `game-asset-planning`.
 }
 ```
 
-## Production Actions
+## Required Command
 
-### Base Generation
+Run:
 
-Possible tools:
-
-- `generate_model`
-- `image_to_3d`
-- `text_to_3d`
-- `multiview_to_3d`
-
-Demo behavior:
-
-```text
-[MOCK] Generate base model from reference.
+```bash
+./bin/tripo-agent generate --input assets/<reference-image>.png
 ```
 
+Or run the full chain:
+
+```bash
+./bin/tripo-agent run --prompt "<game asset request>" --input assets/<reference-image>.png --engine Unity
+```
+
+This creates a real Tripo `image_to_model` task, polls it, downloads task outputs immediately, and writes `workspace/production_result.json`.
+
 ### Mesh Optimization
-
-Possible tools:
-
-- `retopo_mesh`
-- `optimize_mesh`
-- `generate_lod`
 
 Rules:
 
@@ -61,12 +54,6 @@ Rules:
 
 ### UV and Materials
 
-Possible tools:
-
-- `unwrap_uv`
-- `generate_pbr_textures`
-- `bake_maps`
-
 Rules:
 
 - Default workflow: PBR metal-rough.
@@ -74,11 +61,6 @@ Rules:
 - 4K is higher risk and should be explicit.
 
 ### Rigging
-
-Possible tools:
-
-- `rig_character`
-- `map_humanoid_skeleton`
 
 Rules:
 
@@ -89,13 +71,6 @@ Rules:
 
 ### Engine Prep
 
-Possible tools:
-
-- `set_pivot`
-- `normalize_scale`
-- `suggest_collider`
-- `name_material_slots`
-
 Rules:
 
 - Weapons need grip pivot.
@@ -104,13 +79,13 @@ Rules:
 
 ## Failure Logging
 
-Every failed or degraded step must log:
+Every failed or degraded step must log to `outputs/<asset_id>/production_result.json` or the thrown command error:
 
 ```text
-[MOCK] Failed step:
-[MOCK] Reason:
-[MOCK] Decision:
-[MOCK] User-facing impact:
+Failed step:
+Reason:
+Decision:
+User-facing impact:
 ```
 
 ## Stop Condition

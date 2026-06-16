@@ -85,14 +85,12 @@ LoadBaseAsset
 
 ## Tool Mapping
 
-In this portfolio, tools are mocked. In a real Tripo product, the skills would map to tools like:
+Tools are real local scripts. Tripo generation is executed through the public API adapter:
 
-- `generate_model`
-- `retopo_mesh`
-- `unwrap_uv`
-- `generate_pbr_textures`
-- `rig_character`
-- `inspect_game_readiness`
-- `repair_or_degrade`
-- `package_engine_asset`
-- `save_asset_memory`
+- `scripts/setup.mjs`
+- `scripts/doctor.mjs`
+- `scripts/tripo_client.mjs`
+- `scripts/plan_game_asset.mjs`
+- `scripts/generate_game_asset.mjs`
+- `scripts/inspect_game_asset.mjs`
+- `scripts/package_engine_asset.mjs`

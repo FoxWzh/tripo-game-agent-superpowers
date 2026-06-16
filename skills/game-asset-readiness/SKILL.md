@@ -7,11 +7,18 @@ description: Use after production to inspect game-readiness, decide repair or fa
 
 Use this skill after production. This is the quality gate that decides whether the asset is engine-ready, needs repair, or should be delivered with a downgraded scope.
 
-All inspection, repair, fallback, import, export, and packaging steps are `[MOCK]` in this portfolio.
+Inspection and packaging are real local steps. They inspect downloaded model files and create a real zip package. Deeper FBX/rig validation may require Blender.
 
 ## Input
 
 Production Result from `game-asset-production`.
+
+Run:
+
+```bash
+./bin/tripo-agent inspect
+./bin/tripo-agent package-asset --engine unity
+```
 
 ## Output: Readiness Report
 

@@ -1,0 +1,22 @@
+{
+  "name": "tripo-game-agent-superpowers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "generate": "node scripts/generate_game_asset.mjs",
+    "inspect": "node scripts/inspect_game_asset.mjs",
+    "package-asset": "node scripts/package_engine_asset.mjs"
+  },
+  "dependencies": {
+    "@gltf-transform/core": "^4.2.1",
+    "@gltf-transform/functions": "^4.2.1",
+    "@gltf-transform/extensions": "^4.2.1",
+    "adm-zip": "^0.5.16",
+    "dotenv": "^16.4.7",
+    "mime-types": "^2.1.35"
+  },
+  "devDependencies": {}
+}
