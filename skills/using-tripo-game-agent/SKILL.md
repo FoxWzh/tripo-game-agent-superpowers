@@ -15,16 +15,18 @@ Use these skills in order:
 
 ```text
 1. game-asset-intake
-2. game-asset-planning
-3. game-asset-preflight
-4. game-asset-production
-5. game-asset-readiness
-6. game-asset-memory, only if the user asks for iteration, variants, or series reuse
+2. game-asset-view-strategy
+3. game-asset-planning
+4. game-asset-preflight
+5. game-asset-production
+6. game-asset-readiness
+7. game-asset-memory, only if the user asks for iteration, variants, or series reuse
 ```
 
 ## Control Rules
 
 - Do not skip `game-asset-intake`.
+- Do not choose a Tripo model before input inventory and view strategy are known.
 - Do not enter `game-asset-planning` if the Asset Brief has blocking `missing_info`.
 - Do not enter `game-asset-production` before the user can see the Production Plan and Preflight Report.
 - Do not create a Tripo task if preflight has blockers.
@@ -43,6 +45,7 @@ Track the workflow state in every substantial response:
 {
   "stage": "intake|planning|production|readiness|memory",
   "asset_brief": null,
+  "input_inventory": null,
   "production_plan": null,
   "preflight_report": null,
   "production_result": null,
@@ -58,8 +61,10 @@ For real generation, use this path:
 ```text
 intake:
   Write workspace/asset_brief.json.
+view-strategy:
+  Run ./bin/tripo-agent inventory and decide single-image/user-multiview/generated-multiview/text/existing-model route.
 planning:
-  Write workspace/production_plan.json.
+  Write workspace/production_plan.json, including model_route.
 preflight:
   Run ./bin/tripo-agent preflight --input assets/<reference>.png.
 production:
@@ -81,3 +86,7 @@ If asked why this uses Superpowers:
 If asked why preflight exists:
 
 > 3D generation calls are expensive relative to text reasoning. Preflight is the product layer that decides whether this exact call has enough input quality to be worth spending credits, and what the user can add to improve success probability.
+
+If asked why view strategy exists:
+
+> Model routing depends on what material the user already has. The agent should ask for real views before generating candidate views, and should not choose image-to-model or multiview-to-model until the input inventory is known.

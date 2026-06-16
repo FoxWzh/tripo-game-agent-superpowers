@@ -53,6 +53,24 @@ Run:
 
 This creates a real Tripo `image_to_model` task, polls it, downloads task outputs immediately, and writes `workspace/production_result.json`.
 
+If the Production Plan route is `multiview_to_model`, pass real or generated views:
+
+```bash
+./bin/tripo-agent generate \
+  --front assets/front.png \
+  --back assets/back.png \
+  --left assets/left.png \
+  --right assets/right.png
+```
+
+If the user chooses candidate multiview generation first:
+
+```bash
+./bin/tripo-agent synthesize-views --input assets/front.png
+```
+
+Open synthesized views for user confirmation before running 3D generation.
+
 ## User Confirmation UI
 
 After any generated image or 3D file is downloaded, open the best local artifact automatically so the user can confirm it:
@@ -130,7 +148,8 @@ Be explicit when these are not yet fully automated:
 
 - Rigging is planned and checked as a requirement, but final humanoid rig validation may require Tripo rigging endpoints and Blender/engine-side validation.
 - FBX should be attempted through Tripo conversion when requested by the engine; package GLB as fallback if conversion fails.
-- Multi-view generation is a higher-quality path for characters, but the current default script uses single-image `image_to_model`.
+- Multi-view generation is a higher-quality path for characters when real or accepted generated views exist.
+- `multiview_to_model` is supported when inventory/model_route selects it, but generated multiview views still need user acceptance before 3D.
 - Localized edits and modular fit are not full regeneration primitives yet; route them through memory/preflight and do not promise partial mesh surgery.
 
 ## Stop Condition

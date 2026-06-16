@@ -12,13 +12,16 @@ Usage:
   tripo-agent setup
   tripo-agent doctor
   tripo-agent install
+  tripo-agent inventory [--input assets/front.png|--front assets/front.png --back assets/back.png]
   tripo-agent plan --prompt "<游戏资产需求>" [--input assets/ref.png]
+  tripo-agent synthesize-views --input assets/front.png
   tripo-agent preflight --input assets/ref.png [--front assets/front.png --back assets/back.png]
   tripo-agent generate --input assets/ref.png
   tripo-agent convert --format FBX
   tripo-agent inspect
   tripo-agent package-asset [--engine unity]
   tripo-agent run --prompt "<游戏资产需求>" --input assets/ref.png [--engine Unity] [--format FBX] [--yes]
+  tripo-agent run --prompt "<游戏资产需求>" --front assets/f.png --back assets/b.png [--left assets/l.png --right assets/r.png]
   tripo-agent ask "<游戏资产需求>"
   tripo-agent stories [id]
   tripo-agent architecture [skill-pool|composite|routing|eval]
@@ -146,6 +149,7 @@ ask_command() {
       "stage": "intake",
       "skill_order": [
         "game-asset-intake",
+        "game-asset-view-strategy",
         "game-asset-planning",
         "game-asset-preflight",
         "game-asset-production",
@@ -162,6 +166,8 @@ ask_command() {
 - 抽取 tags：${tags[*]:-"intent=unclear"}
 
 ## game-asset-planning / Production Plan
+
+规划前会先运行 `game-asset-view-strategy`，盘点用户是单图、多视图、文字还是已有模型，再决定 image_to_model / multiview_to_model / text_to_model 和 P1 / H3 / H2 / Turbo / v1.4 模型路线。
 
 EOF
 
@@ -254,7 +260,7 @@ EOF
 
 ## 真实产品映射
 
-这里对应 Tripo Game Agent 的 intake、planning、preflight、production、readiness、memory 六个 Superpowers。`ask` 只做意图和方案预览；真实生成请使用 `run`，它会在创建 Tripo task 前做 preflight 和人工确认。
+这里对应 Tripo Game Agent 的 intake、view-strategy、planning、preflight、production、readiness、memory 七个 Superpowers。`ask` 只做意图和方案预览；真实生成请使用 `run`，它会在创建 Tripo task 前做 input inventory、model routing、preflight 和人工确认。
 EOF
 }
 
@@ -352,6 +358,14 @@ plan_command() {
   (cd "$ROOT" && node scripts/plan_game_asset.mjs "$@")
 }
 
+inventory_command() {
+  (cd "$ROOT" && node scripts/inventory_game_asset.mjs "$@")
+}
+
+synthesize_views_command() {
+  (cd "$ROOT" && node scripts/synthesize_views.mjs "$@")
+}
+
 generate_command() {
   (cd "$ROOT" && node scripts/generate_game_asset.mjs "$@")
 }
@@ -382,21 +396,36 @@ run_command() {
   done
 
   (cd "$ROOT" && node scripts/doctor.mjs)
-  (cd "$ROOT" && node scripts/plan_game_asset.mjs "${args[@]}")
 
   local input_args=()
   local engine_args=()
   local convert_args=()
   local conversion_format="FBX"
   local preflight_args=()
+  local inventory_args=()
+  local plan_args=()
   local i=0
   while [[ $i -lt ${#args[@]} ]]; do
     case "${args[$i]}" in
-      --input|--input-url|--front|--back|--left|--right|--base-asset|--scale-note|--pivot|--rig-preset|--poly-budget|--tier)
+      --input|--input-url|--front|--back|--left|--right|--base-asset)
+        inventory_args+=("${args[$i]}" "${args[$((i+1))]}")
         preflight_args+=("${args[$i]}" "${args[$((i+1))]}")
         if [[ "${args[$i]}" == "--input" || "${args[$i]}" == "--input-url" ]]; then
           input_args+=("${args[$i]}" "${args[$((i+1))]}")
         fi
+        if [[ "${args[$i]}" == "--front" || "${args[$i]}" == "--back" || "${args[$i]}" == "--left" || "${args[$i]}" == "--right" ]]; then
+          input_args+=("${args[$i]}" "${args[$((i+1))]}")
+        fi
+        i=$((i+2))
+        ;;
+      --scale-note|--pivot|--rig-preset|--poly-budget|--tier|--model|--model-family|--asset-type)
+        preflight_args+=("${args[$i]}" "${args[$((i+1))]}")
+        plan_args+=("${args[$i]}" "${args[$((i+1))]}")
+        i=$((i+2))
+        ;;
+      --prompt)
+        inventory_args+=("${args[$i]}" "${args[$((i+1))]}")
+        plan_args+=("${args[$i]}" "${args[$((i+1))]}")
         i=$((i+2))
         ;;
       --yes|-y)
@@ -405,6 +434,7 @@ run_command() {
       --engine)
         engine_args+=("--engine" "${args[$((i+1))]}")
         preflight_args+=("--engine" "${args[$((i+1))]}")
+        plan_args+=("--engine" "${args[$((i+1))]}")
         i=$((i+2))
         ;;
       --format)
@@ -428,6 +458,19 @@ run_command() {
       ;;
   esac
   done
+
+  set +e
+  (cd "$ROOT" && node scripts/inventory_game_asset.mjs "${inventory_args[@]}")
+  local inventory_code=$?
+  set -e
+  if [[ $inventory_code -eq 2 ]]; then
+    echo "Inventory found blocking input issues. Fix them before planning."
+    exit 2
+  elif [[ $inventory_code -ne 0 ]]; then
+    exit "$inventory_code"
+  fi
+
+  (cd "$ROOT" && node scripts/plan_game_asset.mjs "${plan_args[@]}")
 
   set +e
   (cd "$ROOT" && node scripts/preflight_game_asset.mjs "${preflight_args[@]}")
@@ -488,6 +531,14 @@ case "$COMMAND" in
   plan)
     shift
     plan_command "$@"
+    ;;
+  inventory)
+    shift
+    inventory_command "$@"
+    ;;
+  synthesize-views)
+    shift
+    synthesize_views_command "$@"
     ;;
   generate)
     shift

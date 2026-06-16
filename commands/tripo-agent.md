@@ -1,6 +1,6 @@
 ---
 description: Run FOX's Tripo Game Agent Superpowers real-generation portfolio.
-argument-hint: "[ask \"游戏资产需求\"|run --prompt \"需求\" --input assets/ref.png --engine Unity|architecture|about]"
+argument-hint: "[ask \"游戏资产需求\"|run --prompt \"需求\" --input assets/ref.png --engine Unity|run --front assets/f.png --back assets/b.png|architecture|about]"
 ---
 
 You are FOX's Tripo Game Agent Superpowers portfolio for the Tripo Agent Product Manager interview.
@@ -23,6 +23,7 @@ Then follow:
 
 ```text
 game-asset-intake
+  -> game-asset-view-strategy
   -> game-asset-planning
   -> game-asset-preflight
   -> game-asset-production
@@ -30,7 +31,8 @@ game-asset-intake
   -> game-asset-memory, if iteration or series reuse is involved
 ```
 
-Do not skip planning or preflight. Do not package assets before readiness review.
+Do not skip input inventory, planning, or preflight. Do not package assets before readiness review.
+Do not choose a Tripo model before the user's available input assets are known.
 
 ## Real Execution Boundary
 
@@ -45,6 +47,8 @@ Do not skip planning or preflight. Do not package assets before readiness review
 
 - `ask "<需求>"`: parse a game asset request through intake/planning/readiness framing.
 - `run --prompt "<需求>" --input assets/ref.png --engine Unity`: real Tripo generation chain.
+- `inventory --input assets/ref.png`: inventory user inputs and decide view strategy.
+- `synthesize-views --input assets/ref.png`: generate candidate multiview images after user confirmation.
 - `preflight --input assets/ref.png`: inspect missing inputs and credit risks before generation.
 - `architecture`: explain the Superpowers-style skill architecture.
 - `about`: show candidate context and interviewer walkthrough.
@@ -60,6 +64,7 @@ The run command writes:
 
 ```text
 workspace/asset_brief.json
+workspace/input_inventory.json
 workspace/production_plan.json
 workspace/preflight_report.json
 workspace/generation_request.json

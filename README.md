@@ -11,7 +11,9 @@ FOX 应聘 Tripo Agent Product Manager 的游戏资产方向面试作品。
 它会真实调用 Tripo API 生成游戏资产，同时保留 Superpowers 风格的流程控制。它展示的是：
 
 - 用户如何表达游戏资产目标
+- Agent 如何盘点用户已有素材并决定单图/多视图/候选多视图路线
 - Agent 如何补齐 Unity / Unreal / Roblox / Godot 约束
+- Agent 如何根据目标和素材选择 P1/H3/H2/Turbo/v1.4 等模型路线
 - Agent 如何生成制作方案、成本和风险
 - Agent 如何在花 credit 前判断还缺什么、补什么最值
 - Agent 如何真实调用 Tripo 生成、下载模型、检查、打包
@@ -65,6 +67,7 @@ outputs/<asset_id>/
 也可以分步执行：
 
 ```bash
+./bin/tripo-agent inventory --input assets/mecha.png
 ./bin/tripo-agent plan --prompt "Unity 里用的机甲角色，quad mesh，15k 面" --engine Unity
 ./bin/tripo-agent preflight --input assets/mecha.png --engine Unity --poly-budget 15000 --rig-preset unity-humanoid
 ./bin/tripo-agent generate --input assets/mecha.png
@@ -72,6 +75,34 @@ outputs/<asset_id>/
 ./bin/tripo-agent inspect
 ./bin/tripo-agent package-asset --engine unity
 ```
+
+如果你有真实多视图：
+
+```bash
+./bin/tripo-agent inventory \
+  --front assets/mecha_front.png \
+  --back assets/mecha_back.png \
+  --left assets/mecha_left.png \
+  --right assets/mecha_right.png
+
+./bin/tripo-agent plan \
+  --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" \
+  --engine Unity
+
+./bin/tripo-agent generate \
+  --front assets/mecha_front.png \
+  --back assets/mecha_back.png \
+  --left assets/mecha_left.png \
+  --right assets/mecha_right.png
+```
+
+如果只有一张图，但用户确认愿意先生成候选多视图：
+
+```bash
+./bin/tripo-agent synthesize-views --input assets/mecha_front.png
+```
+
+生成的图片会自动打开，用户确认后再进入 3D。
 
 `run` 会在创建 Tripo task 前停下来要求确认。确认前可以查看：
 
@@ -124,6 +155,8 @@ tripo-game-agent-superpowers/
 │   │   └── SKILL.md
 │   ├── game-asset-intake/
 │   │   └── SKILL.md
+│   ├── game-asset-view-strategy/
+│   │   └── SKILL.md
 │   ├── game-asset-planning/
 │   │   └── SKILL.md
 │   ├── game-asset-preflight/
@@ -152,6 +185,7 @@ Bootstrap skill。强制 Agent 按流程工作：
 
 ```text
 game-asset-intake
+  -> game-asset-view-strategy
   -> game-asset-planning
   -> game-asset-preflight
   -> game-asset-production
@@ -159,7 +193,7 @@ game-asset-intake
   -> game-asset-memory
 ```
 
-它规定不能跳过 planning，不能在 readiness 之前打包，且禁止 mock 生成。
+它规定不能跳过 view strategy、planning 和 preflight，不能在 readiness 之前打包，且禁止 mock 生成。
 
 ### `game-asset-intake`
 
@@ -170,11 +204,21 @@ game-asset-intake
 - clarification policy
 - Asset Brief 输出契约
 
+### `game-asset-view-strategy`
+
+负责素材盘点和视角策略：
+
+- text only / single image / user multiview / generated multiview / existing model
+- 优先使用用户真实多视图
+- 没有多视图时，先问用户是否已有更多角度图
+- 用户确认后才调用候选多视图生成
+
 ### `game-asset-planning`
 
 负责把 Asset Brief 变成 Production Plan：
 
 - workflow template
+- model routing: P1 / H3 / H2 / Turbo / v1.4
 - cost/time estimate
 - execution tiers
 - risk points
@@ -220,6 +264,9 @@ game-asset-intake
 
 - API key/依赖检查
 - image-to-model 真实调用
+- multiview input inventory 和 model_route 产物
+- generate_multiview_image 候选多视图生成
+- multiview_to_model 路线支持
 - Tripo task 轮询和下载
 - Tripo conversion API 转 FBX/OBJ/STL/GLTF 等格式
 - GLB/PBR 结果基础检查

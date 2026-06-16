@@ -1,5 +1,14 @@
 import path from 'node:path';
-import { ensureDirs, workspaceDir, writeJson, parseArgs, slugify } from './config.mjs';
+import fs from 'node:fs';
+import { ensureDirs, workspaceDir, writeJson, readJson, parseArgs, slugify } from './config.mjs';
+
+const MODEL_VERSIONS = {
+  P1: 'p1-20260311',
+  H3: 'v3.1-20260211',
+  H2: 'v2.5-20250123',
+  Turbo: 'turbo-v1.0-20250506',
+  v14: 'v1.4-20240625'
+};
 
 function inferBrief({ prompt, engine, assetType, polyBudget }) {
   const text = `${prompt || ''} ${engine || ''} ${assetType || ''}`.toLowerCase();
@@ -39,12 +48,50 @@ function inferBrief({ prompt, engine, assetType, polyBudget }) {
   };
 }
 
-function tripoParamsForBrief(brief) {
+function routeModel({ brief, inventory, tier = 'Standard', model }) {
+  const inputMode = inventory?.input_mode || 'single_image';
+  const viewStrategy = inventory?.view_strategy?.strategy || 'unknown';
+  const text = `${brief.prompt || ''} ${tier || ''} ${model || ''}`.toLowerCase();
+  let modelFamily = model || null;
+
+  if (!modelFamily) {
+    if (/turbo|draft|草稿|快速/.test(text) || tier === 'Draft') modelFamily = 'Turbo';
+    else if (/h3|hero|高保真|cinematic/.test(text)) modelFamily = 'H3';
+    else if (/h2|stable|稳定|兼容/.test(text)) modelFamily = 'H2';
+    else if (/v1\.4|legacy|旧/.test(text)) modelFamily = 'v14';
+    else modelFamily = 'P1';
+  }
+
+  const taskType = inputMode === 'user_multiview' || inputMode === 'generated_multiview'
+    ? 'multiview_to_model'
+    : inputMode === 'text_only'
+      ? 'text_to_model'
+      : 'image_to_model';
+
+  const reason = [];
+  if (taskType === 'multiview_to_model') reason.push('user or generated multiview input is available');
+  if (modelFamily === 'P1') reason.push('game runtime asset benefits from low-poly/topology-oriented route');
+  if (modelFamily === 'H3') reason.push('high-fidelity route requested or inferred');
+  if (modelFamily === 'Turbo') reason.push('draft/fast preview requested');
+  if (viewStrategy === 'ask_user_for_views_or_generate_multiview') reason.push('single image can proceed, but multiview may reduce hidden-side risk');
+
+  return {
+    task_type: taskType,
+    model_family: modelFamily,
+    model_version: MODEL_VERSIONS[modelFamily] || modelFamily,
+    input_mode: inputMode,
+    view_strategy: viewStrategy,
+    fallback_model_family: modelFamily === 'P1' ? 'H3' : 'P1',
+    reason
+  };
+}
+
+function tripoParamsForBrief(brief, modelRoute) {
   const wantsQuad = brief.asset_type === 'character' || brief.asset_type === 'modular_part';
   const faceLimit = Number(brief.poly_budget || 15000);
   const smartLowPoly = faceLimit <= 10000;
   return {
-    model_version: 'v3.1-20260211',
+    model_version: modelRoute.model_version,
     texture: true,
     pbr: true,
     texture_quality: 'standard',
@@ -54,14 +101,19 @@ function tripoParamsForBrief(brief) {
     auto_size: true,
     orientation: 'align_image',
     export_uv: true,
-    geometry_quality: 'standard'
+    geometry_quality: modelRoute.model_family === 'H3' ? 'high' : 'standard'
   };
 }
 
-function workflowForBrief(brief) {
+function workflowForBrief(brief, modelRoute) {
+  const inputStep = modelRoute.task_type === 'multiview_to_model'
+    ? 'MultiViewTo3D'
+    : modelRoute.task_type === 'text_to_model'
+      ? 'TextTo3D'
+      : 'ImageTo3D';
   if (brief.asset_type === 'character') {
     return [
-      'ImageTo3D',
+      `${inputStep}(model=${modelRoute.model_family})`,
       `Retopo(mode=quad,target=${brief.poly_budget})`,
       'UVUnwrap',
       'PBRTexture(workflow=metal-rough,size=2K)',
@@ -71,18 +123,19 @@ function workflowForBrief(brief) {
     ];
   }
   if (brief.asset_type === 'weapon') {
-    return ['ImageTo3D', 'Retopo', 'UVUnwrap', 'PBRTexture', 'GripPivotCheck', 'ScaleCheck', 'ReadinessReview', `Export${brief.format}`];
+    return [`${inputStep}(model=${modelRoute.model_family})`, 'Retopo', 'UVUnwrap', 'PBRTexture', 'GripPivotCheck', 'ScaleCheck', 'ReadinessReview', `Export${brief.format}`];
   }
   if (brief.asset_type === 'environment') {
-    return ['ImageTo3D', 'Segment', 'OptimizeMesh', 'GenerateLOD', 'PBRTexture', 'ColliderHint', 'ReadinessReview', `Export${brief.format}`];
+    return [`${inputStep}(model=${modelRoute.model_family})`, 'Segment', 'OptimizeMesh', 'GenerateLOD', 'PBRTexture', 'ColliderHint', 'ReadinessReview', `Export${brief.format}`];
   }
   if (brief.asset_type === 'modular_part') {
-    return ['LoadBaseAsset', 'StyleLock', 'ImageTo3D', 'FitToBaseMesh', 'TextureMatch', 'ReadinessReview', 'ExportPack'];
+    return ['LoadBaseAsset', 'StyleLock', `${inputStep}(model=${modelRoute.model_family})`, 'FitToBaseMesh', 'TextureMatch', 'ReadinessReview', 'ExportPack'];
   }
-  return ['ImageTo3D', 'Retopo', 'UVUnwrap', 'PBRTexture', 'PivotScaleCheck', 'ReadinessReview', `Export${brief.format}`];
+  return [`${inputStep}(model=${modelRoute.model_family})`, 'Retopo', 'UVUnwrap', 'PBRTexture', 'PivotScaleCheck', 'ReadinessReview', `Export${brief.format}`];
 }
 
-function planForBrief(brief) {
+function planForBrief(brief, { inventory = null, tier = 'Standard', model = null } = {}) {
+  const modelRoute = routeModel({ brief, inventory, tier, model });
   const preflightQuestions = [];
   if (brief.asset_type === 'character') {
     preflightQuestions.push(
@@ -113,7 +166,9 @@ function planForBrief(brief) {
   return {
     asset_id: brief.asset_id,
     workflow_name: brief.asset_type === 'character' ? 'GameReadyCharacter' : `GameReady${brief.asset_type}`,
-    dag: workflowForBrief(brief),
+    dag: workflowForBrief(brief, modelRoute),
+    model_route: modelRoute,
+    input_inventory: inventory,
     parameters: {
       engine: brief.engine,
       format: brief.format,
@@ -121,7 +176,7 @@ function planForBrief(brief) {
       texture_size: brief.texture_size,
       rig_required: brief.rig_required
     },
-    tripo_params: tripoParamsForBrief(brief),
+    tripo_params: tripoParamsForBrief(brief, modelRoute),
     execution_tiers: [
       { name: 'Draft', description: 'fast generation preview' },
       { name: 'Standard', description: 'optimized mesh + PBR + engine export' },
@@ -134,7 +189,8 @@ function planForBrief(brief) {
       'Rig compatibility still requires engine-side validation.',
       'Downloaded result URLs can expire; download immediately after task success.',
       'Single-image characters may fail on unseen back/side details; multi-view input is preferred.',
-      'FBX export may require conversion if the Tripo task only returns GLB.'
+      'FBX export may require conversion if the Tripo task only returns GLB.',
+      'Model route should be revisited if user provides more views or changes tier.'
     ],
     fallback_policy: [
       'If FBX is unavailable, package GLB and document limitation.',
@@ -159,7 +215,13 @@ async function main() {
     assetType: args['asset-type'],
     polyBudget: args['poly-budget']
   });
-  const plan = planForBrief(brief);
+  const inventoryPath = args.inventory || path.join(workspaceDir, 'input_inventory.json');
+  const inventory = fs.existsSync(inventoryPath) ? readJson(inventoryPath) : null;
+  const plan = planForBrief(brief, {
+    inventory,
+    tier: args.tier || 'Standard',
+    model: args.model || args['model-family']
+  });
   writeJson(args.brief || path.join(workspaceDir, 'asset_brief.json'), brief);
   writeJson(args.plan || path.join(workspaceDir, 'production_plan.json'), plan);
   console.log(`Wrote Asset Brief and Production Plan for ${brief.asset_id}`);

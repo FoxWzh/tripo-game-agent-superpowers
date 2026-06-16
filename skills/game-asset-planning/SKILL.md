@@ -5,15 +5,15 @@ description: Use after game-asset-intake to turn an Asset Brief into a user-visi
 
 # Game Asset Planning
 
-Use this skill only after an Asset Brief exists.
+Use this skill only after an Asset Brief and Input Inventory exist.
 
 Planning is the product confirmation layer between "the agent understood me" and "the agent starts spending credits/time."
 
-After planning, always run `game-asset-preflight`. Planning defines what should happen; preflight decides whether the next real Tripo call has enough input quality to be worth the cost.
+Model routing happens here, after intent and input inventory are known. After planning, always run `game-asset-preflight`. Planning defines what should happen; preflight decides whether the next real Tripo call has enough input quality to be worth the cost.
 
 ## Input
 
-Asset Brief from `game-asset-intake`.
+Asset Brief from `game-asset-intake` and Input Inventory from `game-asset-view-strategy`.
 
 ## Output: Production Plan
 
@@ -22,6 +22,7 @@ Always produce:
 ```json
 {
   "workflow_name": "GameReadyCharacter|GameReadyProp|GameReadyWeapon|GameReadyEnvironment|ModularGameAsset",
+  "model_route": {},
   "dag": [],
   "parameters": {},
   "execution_tiers": [],
@@ -31,6 +32,39 @@ Always produce:
   "fallback_policy": [],
   "expected_package": [],
   "preflight_questions": []
+}
+```
+
+## Model Routing
+
+Choose model only after input inventory:
+
+- `P1`: game runtime assets, low-poly/topology-oriented route, default for Unity/Unreal runtime assets.
+- `H3`: high-fidelity or hero asset route.
+- `H2`: stable 2.x baseline or compatibility route.
+- `Turbo`: Draft tier / fast shape exploration.
+- `v1.4`: legacy integration compatibility only.
+
+Choose task type from input:
+
+- User has real multiview: `multiview_to_model`.
+- User generated candidate multiview and accepted it: `multiview_to_model`.
+- User has one image: `image_to_model`, unless user chooses to synthesize views first.
+- User has only text: `text_to_model` or generate concept/multiview first.
+- User has existing model: route to conversion/readiness/revision/memory, not new generation.
+
+Production Plan must include:
+
+```json
+{
+  "model_route": {
+    "task_type": "image_to_model|multiview_to_model|text_to_model",
+    "model_family": "P1|H3|H2|Turbo|v14",
+    "model_version": "",
+    "input_mode": "",
+    "view_strategy": "",
+    "reason": []
+  }
 }
 ```
 

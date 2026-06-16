@@ -23,12 +23,14 @@ function detectViews(args) {
   return views;
 }
 
-function imageAssessment({ args, brief }) {
+function imageAssessment({ args, brief, inventory }) {
   const input = args.input || args['input-url'] || '';
   const inputExt = path.extname(input).toLowerCase();
   const inputExists = args['input-url'] ? true : fileExists(input);
   const views = detectViews(args);
-  const viewCount = Object.values(views).filter((view) => view.exists).length;
+  const inventoryViews = inventory?.views || {};
+  const inventoryViewCount = Object.values(inventoryViews).filter((view) => view.exists && view.supported !== false).length;
+  const viewCount = Math.max(Object.values(views).filter((view) => view.exists).length, inventoryViewCount);
   const issues = [];
   const improvements = [];
 
@@ -86,7 +88,16 @@ function imageAssessment({ args, brief }) {
     });
   }
 
-  return { input, input_exists: inputExists, views, view_count: viewCount, issues, improvements };
+  return {
+    input,
+    input_exists: inputExists,
+    views: Object.keys(views).length ? views : inventoryViews,
+    view_count: viewCount,
+    input_mode: inventory?.input_mode || null,
+    view_strategy: inventory?.view_strategy || null,
+    issues,
+    improvements
+  };
 }
 
 function engineAssessment({ args, brief }) {
@@ -167,6 +178,8 @@ function renderMarkdown(report) {
     `Recommendation: ${report.recommendation}`,
     `Estimated credits: ${report.cost.estimated_credits}`,
     `Estimated time: ${report.cost.estimated_time}`,
+    `Model route: ${report.model_route?.model_family || 'unknown'} / ${report.model_route?.task_type || 'unknown'}`,
+    `View strategy: ${report.image.view_strategy?.strategy || 'unknown'}`,
     '',
     '## Missing Or Blocking',
     ...(report.blockers.length
@@ -191,7 +204,9 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const brief = readJson(args.brief || path.join(workspaceDir, 'asset_brief.json'));
   const plan = readJson(args.plan || path.join(workspaceDir, 'production_plan.json'));
-  const image = imageAssessment({ args, brief });
+  const inventoryPath = args.inventory || path.join(workspaceDir, 'input_inventory.json');
+  const inventory = fs.existsSync(inventoryPath) ? readJson(inventoryPath) : (plan.input_inventory || null);
+  const image = imageAssessment({ args, brief, inventory });
   const engine = engineAssessment({ args, brief });
   const cost = costAssessment({ brief, plan, image, engine });
   const blockers = [...image.issues, ...engine.issues].filter((item) => item.severity === 'blocker');
@@ -203,6 +218,8 @@ async function main() {
     improvements,
     image,
     engine,
+    input_inventory: inventory,
+    model_route: plan.model_route || null,
     cost,
     next_action: cost.recommendation === 'block'
       ? '补齐 blocker 后重新运行 preflight。'

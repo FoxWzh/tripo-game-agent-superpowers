@@ -29,6 +29,7 @@ The Tripo Game Agent workflow is:
 
 ```text
 game-asset-intake
+  -> game-asset-view-strategy
   -> game-asset-planning
   -> game-asset-preflight
   -> game-asset-production
@@ -51,6 +52,7 @@ The real execution path writes:
 
 ```text
 workspace/asset_brief.json
+workspace/input_inventory.json
 workspace/production_plan.json
 workspace/preflight_report.json
 workspace/generation_request.json
@@ -74,5 +76,7 @@ Before spending credits, protect the user by answering three questions:
 1. What is still missing?
 2. What extra input would most improve this specific Tripo call?
 3. Which known game-asset risks remain unsolved and need either confirmation, fallback, or roadmap framing?
+
+Do not choose the Tripo model route until both user intent and input inventory are known. Prefer real user multiview images over generated candidate views, and prefer generated candidate views over risky single-image 3D only when the user confirms.
 
 Use Chinese primarily. Keep standard game/3D terms in English where appropriate: FBX, GLB, PBR, Retopo, Rig, LOD, Unity, Unreal.

@@ -19,10 +19,33 @@ function normalizeUploadToken(uploadResult) {
   return uploadResult.image_token || uploadResult.file_token || uploadResult.token || uploadResult.id;
 }
 
-function mapPlanToTripoPayload({ plan, uploadToken, inputUrl }) {
+function fileTypeForPath(filePath) {
+  const ext = path.extname(filePath || '').replace('.', '').toLowerCase();
+  return ext === 'jpg' ? 'jpeg' : ext || 'png';
+}
+
+async function uploadImage(client, filePath) {
+  const result = await client.uploadFile(path.resolve(filePath));
+  const token = normalizeUploadToken(result);
+  if (!token) {
+    throw new Error(`Upload result did not include a file/image token: ${JSON.stringify(result)}`);
+  }
+  return {
+    result,
+    token,
+    file: {
+      type: fileTypeForPath(filePath),
+      file_token: token
+    }
+  };
+}
+
+function mapPlanToTripoPayload({ plan, uploadToken, inputUrl, multiviewFiles }) {
   const params = plan.tripo_params || {};
+  const modelRoute = plan.model_route || {};
+  const taskType = modelRoute.task_type || 'image_to_model';
   const payload = {
-    type: 'image_to_model',
+    type: taskType,
     model_version: params.model_version || 'v3.1-20260211',
     texture: params.texture ?? true,
     pbr: params.pbr ?? true,
@@ -35,6 +58,24 @@ function mapPlanToTripoPayload({ plan, uploadToken, inputUrl }) {
     export_uv: params.export_uv ?? true,
     geometry_quality: params.geometry_quality || 'standard'
   };
+
+  if (taskType === 'text_to_model') {
+    payload.prompt = plan.prompt || plan.input_inventory?.prompt || '';
+    if (!payload.prompt) throw new Error('Text-to-model requires prompt in plan.');
+    return payload;
+  }
+
+  if (taskType === 'multiview_to_model') {
+    const files = {};
+    for (const view of ['front', 'left', 'back', 'right']) {
+      if (multiviewFiles?.[view]) files[view] = multiviewFiles[view];
+    }
+    if (!files.front || Object.keys(files).length < 2) {
+      throw new Error('Multiview-to-model requires at least front plus one other view.');
+    }
+    payload.files = files;
+    return payload;
+  }
 
   if (uploadToken) {
     payload.file = {
@@ -81,19 +122,34 @@ async function main() {
   const client = new TripoClient();
   let uploadToken = null;
   let uploadResult = null;
+  let multiviewFiles = null;
+  const modelRoute = plan.model_route || {};
+  const taskType = modelRoute.task_type || 'image_to_model';
   if (inputPath) {
-    uploadResult = await client.uploadFile(path.resolve(inputPath));
-    uploadToken = normalizeUploadToken(uploadResult);
-    if (!uploadToken) {
-      throw new Error(`Upload result did not include a file/image token: ${JSON.stringify(uploadResult)}`);
-    }
+    const uploaded = await uploadImage(client, inputPath);
+    uploadResult = uploaded.result;
+    uploadToken = uploaded.token;
   }
 
-  const request = mapPlanToTripoPayload({ plan, uploadToken, inputUrl });
+  if (taskType === 'multiview_to_model') {
+    multiviewFiles = {};
+    const uploadResults = {};
+    const inventoryViews = plan.input_inventory?.views || {};
+    for (const view of ['front', 'left', 'back', 'right']) {
+      const filePath = args[view] || inventoryViews[view]?.path;
+      if (!filePath) continue;
+      const uploaded = await uploadImage(client, filePath);
+      multiviewFiles[view] = uploaded.file;
+      uploadResults[view] = uploaded.result;
+    }
+    uploadResult = { single_image: uploadResult, multiview: uploadResults };
+  }
+
+  const request = mapPlanToTripoPayload({ plan, uploadToken, inputUrl, multiviewFiles });
   writeJson(path.join(outDir, 'generation_request.json'), request);
   writeJson(path.join(workspaceDir, 'generation_request.json'), request);
 
-  console.log('Creating Tripo image_to_model task...');
+  console.log(`Creating Tripo ${request.type} task...`);
   const created = await client.createTask(request);
   const taskId = created.task_id || created.id;
   if (!taskId) {

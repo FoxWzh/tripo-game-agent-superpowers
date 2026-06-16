@@ -8,6 +8,7 @@ This plugin follows the `obra/superpowers` pattern:
 CLAUDE.md
   -> using-tripo-game-agent
       -> game-asset-intake
+      -> game-asset-view-strategy
       -> game-asset-planning
       -> game-asset-preflight
       -> game-asset-production
@@ -22,7 +23,8 @@ CLAUDE.md
 The workflow is not split into nine tiny skills. It is split by stable knowledge domain:
 
 - Intake: user intent, asset taxonomy, engine presets, clarification.
-- Planning: workflow templates, cost/time, tiers, risks, fallback policy.
+- View Strategy: input inventory, single-image vs user multiview vs generated multiview vs existing model.
+- Planning: model routing, workflow templates, cost/time, tiers, risks, fallback policy.
 - Preflight: missing inputs, high-value extra context, credit-risk gate, user confirmation.
 - Production: generation and optimization execution mapping.
 - Readiness: game usability checks, repairs, downgrade, package schema.
@@ -32,6 +34,7 @@ The workflow is not split into nine tiny skills. It is split by stable knowledge
 
 ```text
 intake
+  -> view-strategy
   -> planning
   -> preflight
   -> production
@@ -42,6 +45,7 @@ intake
 Control rules:
 
 - Do not skip intake.
+- Do not choose a model before input inventory and view strategy are known.
 - Do not enter planning if blocking info is missing.
 - Do not enter production before showing the Production Plan and Preflight Report.
 - Do not create a Tripo task if preflight has blockers.
@@ -63,6 +67,29 @@ Typical high-value inputs:
 - Prop/weapon: pivot, scale, grip direction, material callouts.
 - Environment: modular kit vs set piece, LOD/collider need, scale reference.
 - Modular part: base asset id/path, attachment region, fit requirement.
+
+## View Strategy And Model Routing
+
+Routing order:
+
+```text
+intent -> input inventory -> view strategy -> model route -> production plan
+```
+
+Rules:
+
+- User real multiview beats generated candidate multiview.
+- Generated candidate multiview beats single-image 3D only after user confirmation.
+- Single-image 3D is allowed, but back/side/rig risks must be explicit.
+- Existing models route to conversion, readiness, memory, or revision rather than new generation.
+
+Model families:
+
+- `P1`: default for game runtime assets and topology/low-poly-oriented routes.
+- `H3`: high-fidelity / hero asset route.
+- `H2`: stable 2.x baseline.
+- `Turbo`: draft and fast shape exploration.
+- `v1.4`: legacy compatibility only.
 
 ## Game Asset Workflow Templates
 
@@ -110,7 +137,9 @@ Tools are real local scripts. Tripo generation is executed through the public AP
 - `scripts/setup.mjs`
 - `scripts/doctor.mjs`
 - `scripts/tripo_client.mjs`
+- `scripts/inventory_game_asset.mjs`
 - `scripts/plan_game_asset.mjs`
+- `scripts/synthesize_views.mjs`
 - `scripts/preflight_game_asset.mjs`
 - `scripts/generate_game_asset.mjs`
 - `scripts/convert_model.mjs`
@@ -122,6 +151,9 @@ Tools are real local scripts. Tripo generation is executed through the public AP
 Real today:
 
 - API key and dependency checks.
+- Input inventory and model_route generation.
+- Candidate multiview image generation path.
+- Multiview-to-model payload path when user/generator views exist.
 - Real image-to-model task creation, polling, downloads.
 - Real convert_model task for FBX/OBJ/STL/GLTF-style export when requested.
 - GLB/PBR file inspection and package creation.
