@@ -13,6 +13,7 @@ FOX 应聘 Tripo Agent Product Manager 的游戏资产方向面试作品。
 - 用户如何表达游戏资产目标
 - Agent 如何补齐 Unity / Unreal / Roblox / Godot 约束
 - Agent 如何生成制作方案、成本和风险
+- Agent 如何在花 credit 前判断还缺什么、补什么最值
 - Agent 如何真实调用 Tripo 生成、下载模型、检查、打包
 - Agent 如何把资产记忆保存为后续改稿和系列复用基础
 
@@ -63,10 +64,20 @@ outputs/<asset_id>/
 
 ```bash
 ./bin/tripo-agent plan --prompt "Unity 里用的机甲角色，quad mesh，15k 面" --engine Unity
+./bin/tripo-agent preflight --input assets/mecha.png --engine Unity --poly-budget 15000 --rig-preset unity-humanoid
 ./bin/tripo-agent generate --input assets/mecha.png
 ./bin/tripo-agent inspect
 ./bin/tripo-agent package-asset --engine unity
 ```
+
+`run` 会在创建 Tripo task 前停下来要求确认。确认前可以查看：
+
+```text
+workspace/production_plan.json
+workspace/preflight_report.md
+```
+
+如果你已经确认风险并想录屏时跳过交互，可以加 `--yes`。
 
 ## 安装到 Claude Code
 
@@ -111,6 +122,8 @@ tripo-game-agent-superpowers/
 │   │   └── SKILL.md
 │   ├── game-asset-planning/
 │   │   └── SKILL.md
+│   ├── game-asset-preflight/
+│   │   └── SKILL.md
 │   ├── game-asset-production/
 │   │   └── SKILL.md
 │   ├── game-asset-readiness/
@@ -136,6 +149,7 @@ Bootstrap skill。强制 Agent 按流程工作：
 ```text
 game-asset-intake
   -> game-asset-planning
+  -> game-asset-preflight
   -> game-asset-production
   -> game-asset-readiness
   -> game-asset-memory
@@ -162,6 +176,15 @@ game-asset-intake
 - risk points
 - fallback policy
 
+### `game-asset-preflight`
+
+负责生成前质量门和 human loop：
+
+- 当前还缺什么
+- 补什么输入最能提高这次 Tripo 调用质量
+- 哪些风险会浪费 credit
+- 是否应该 block / ask_user / proceed
+
 ### `game-asset-production`
 
 负责生成和优化阶段的真实系统映射：
@@ -187,6 +210,27 @@ game-asset-intake
 - import smoke test
 - package schema
 
+## 当前游戏问题覆盖边界
+
+已经真实闭环：
+
+- API key/依赖检查
+- image-to-model 真实调用
+- Tripo task 轮询和下载
+- GLB/PBR 结果基础检查
+- Unity package zip
+- 生成前 preflight 和确认门
+
+已纳入流程但未完全自动化：
+
+- Unity Humanoid / UE Manny rig 验证
+- FBX 转换与贴图 zip 结构
+- quad 拓扑和 face budget 的强验证
+- LOD/collider 自动生成
+- weapon grip pivot / socket 精确验证
+- modular asset 与 base character 的真实 fit
+- 局部改稿而非整模重生成
+
 ### `game-asset-memory`
 
 负责继续改稿和系列复用：
@@ -200,9 +244,10 @@ game-asset-intake
 ## 面试官 5 分钟路径
 
 1. 跑 `./bin/tripo-agent setup`，配置 API key 和依赖。
-2. 跑 `./bin/tripo-agent run --prompt "Unity 里用的机甲角色，quad mesh，15k 面" --input assets/mecha.png --engine Unity`，真实生成。
-3. 看 `outputs/<asset_id>/readiness_report.md`，理解为什么“生成模型”不等于“游戏可用资产”。
-4. 看 `skills/using-tripo-game-agent/SKILL.md`，理解为什么这是 Superpowers 风格。
+2. 跑 `./bin/tripo-agent plan ...` 和 `./bin/tripo-agent preflight ...`，展示生成前如何保护 credit。
+3. 跑 `./bin/tripo-agent run --prompt "Unity 里用的机甲角色，quad mesh，15k 面" --input assets/mecha.png --engine Unity`，真实生成。
+4. 看 `outputs/<asset_id>/readiness_report.md`，理解为什么“生成模型”不等于“游戏可用资产”。
+5. 看 `skills/using-tripo-game-agent/SKILL.md`，理解为什么这是 Superpowers 风格。
 
 ## 分发打包
 

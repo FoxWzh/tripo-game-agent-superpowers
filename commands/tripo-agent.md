@@ -24,18 +24,20 @@ Then follow:
 ```text
 game-asset-intake
   -> game-asset-planning
+  -> game-asset-preflight
   -> game-asset-production
   -> game-asset-readiness
   -> game-asset-memory, if iteration or series reuse is involved
 ```
 
-Do not skip planning. Do not package assets before readiness review.
+Do not skip planning or preflight. Do not package assets before readiness review.
 
 ## Real Execution Boundary
 
 - This project has a real Tripo API execution path.
 - Do not mock generation.
 - If `TRIPO_API_KEY` or dependencies are missing, run `./bin/tripo-agent setup`.
+- Before creating a Tripo task, run preflight or use `./bin/tripo-agent run`, which runs preflight automatically.
 - Do not claim generation succeeded unless files exist under `outputs/<asset_id>/`.
 - Cost/time numbers are estimates until the Tripo task result is available.
 
@@ -43,6 +45,7 @@ Do not skip planning. Do not package assets before readiness review.
 
 - `ask "<需求>"`: parse a game asset request through intake/planning/readiness framing.
 - `run --prompt "<需求>" --input assets/ref.png --engine Unity`: real Tripo generation chain.
+- `preflight --input assets/ref.png`: inspect missing inputs and credit risks before generation.
 - `architecture`: explain the Superpowers-style skill architecture.
 - `about`: show candidate context and interviewer walkthrough.
 
@@ -58,6 +61,7 @@ The run command writes:
 ```text
 workspace/asset_brief.json
 workspace/production_plan.json
+workspace/preflight_report.json
 workspace/generation_request.json
 workspace/production_result.json
 workspace/readiness_report.json

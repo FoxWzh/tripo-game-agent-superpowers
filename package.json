@@ -6,6 +6,8 @@
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "doctor": "node scripts/doctor.mjs",
+    "plan": "node scripts/plan_game_asset.mjs",
+    "preflight": "node scripts/preflight_game_asset.mjs",
     "generate": "node scripts/generate_game_asset.mjs",
     "inspect": "node scripts/inspect_game_asset.mjs",
     "package-asset": "node scripts/package_engine_asset.mjs"

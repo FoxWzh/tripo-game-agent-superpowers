@@ -30,12 +30,13 @@ The Tripo Game Agent workflow is:
 ```text
 game-asset-intake
   -> game-asset-planning
+  -> game-asset-preflight
   -> game-asset-production
   -> game-asset-readiness
   -> game-asset-memory, if iteration or series reuse is involved
 ```
 
-The skills are mandatory workflow modules, not optional references. If information is insufficient at intake, ask clarification questions and stop before planning.
+The skills are mandatory workflow modules, not optional references. If information is insufficient at intake or preflight says the next Tripo call is likely to waste credits, ask clarification questions and stop before production.
 
 ## Real Execution Commands
 
@@ -51,6 +52,7 @@ The real execution path writes:
 ```text
 workspace/asset_brief.json
 workspace/production_plan.json
+workspace/preflight_report.json
 workspace/generation_request.json
 workspace/production_result.json
 workspace/readiness_report.json
@@ -63,5 +65,11 @@ outputs/<asset_id>/
 The key product thesis:
 
 > Game users do not want a generic 3D model. They want an engine-ready asset that respects format, topology, poly budget, materials, rigging, scale, pivot, import behavior, and iteration memory.
+
+Before spending credits, protect the user by answering three questions:
+
+1. What is still missing?
+2. What extra input would most improve this specific Tripo call?
+3. Which known game-asset risks remain unsolved and need either confirmation, fallback, or roadmap framing?
 
 Use Chinese primarily. Keep standard game/3D terms in English where appropriate: FBX, GLB, PBR, Retopo, Rig, LOD, Unity, Unreal.

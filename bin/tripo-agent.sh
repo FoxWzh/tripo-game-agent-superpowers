@@ -13,10 +13,11 @@ Usage:
   tripo-agent doctor
   tripo-agent install
   tripo-agent plan --prompt "<游戏资产需求>" [--input assets/ref.png]
+  tripo-agent preflight --input assets/ref.png [--front assets/front.png --back assets/back.png]
   tripo-agent generate --input assets/ref.png
   tripo-agent inspect
   tripo-agent package-asset [--engine unity]
-  tripo-agent run --prompt "<游戏资产需求>" --input assets/ref.png [--engine Unity]
+  tripo-agent run --prompt "<游戏资产需求>" --input assets/ref.png [--engine Unity] [--yes]
   tripo-agent ask "<游戏资产需求>"
   tripo-agent stories [id]
   tripo-agent architecture [skill-pool|composite|routing|eval]
@@ -251,7 +252,7 @@ EOF
 
 ## 真实产品映射
 
-这里对应 Tripo Game Agent 的 intake、planning、production、readiness、memory 五个 Superpowers。本地 demo 不执行真实生成。
+这里对应 Tripo Game Agent 的 intake、planning、preflight、production、readiness、memory 六个 Superpowers。`ask` 只做意图和方案预览；真实生成请使用 `run`，它会在创建 Tripo task 前做 preflight 和人工确认。
 EOF
 }
 
@@ -352,6 +353,10 @@ generate_command() {
   (cd "$ROOT" && node scripts/generate_game_asset.mjs "$@")
 }
 
+preflight_command() {
+  (cd "$ROOT" && node scripts/preflight_game_asset.mjs "$@")
+}
+
 inspect_command() {
   (cd "$ROOT" && node scripts/inspect_game_asset.mjs "$@")
 }
@@ -362,27 +367,67 @@ package_asset_command() {
 
 run_command() {
   local args=("$@")
+  local auto_yes="false"
+  for arg in "${args[@]}"; do
+    if [[ "$arg" == "--yes" || "$arg" == "-y" ]]; then
+      auto_yes="true"
+    fi
+  done
+
   (cd "$ROOT" && node scripts/doctor.mjs)
   (cd "$ROOT" && node scripts/plan_game_asset.mjs "${args[@]}")
 
   local input_args=()
   local engine_args=()
+  local preflight_args=()
   local i=0
   while [[ $i -lt ${#args[@]} ]]; do
     case "${args[$i]}" in
-      --input|--input-url)
-        input_args+=("${args[$i]}" "${args[$((i+1))]}")
+      --input|--input-url|--front|--back|--left|--right|--base-asset|--scale-note|--pivot|--rig-preset|--poly-budget|--tier)
+        preflight_args+=("${args[$i]}" "${args[$((i+1))]}")
+        if [[ "${args[$i]}" == "--input" || "${args[$i]}" == "--input-url" ]]; then
+          input_args+=("${args[$i]}" "${args[$((i+1))]}")
+        fi
         i=$((i+2))
+        ;;
+      --yes|-y)
+        i=$((i+1))
         ;;
       --engine)
         engine_args+=("--engine" "${args[$((i+1))]}")
+        preflight_args+=("--engine" "${args[$((i+1))]}")
         i=$((i+2))
         ;;
       *)
         i=$((i+1))
+      ;;
+  esac
+  done
+
+  set +e
+  (cd "$ROOT" && node scripts/preflight_game_asset.mjs "${preflight_args[@]}")
+  local preflight_code=$?
+  set -e
+  if [[ $preflight_code -eq 2 ]]; then
+    echo "Preflight found blocking issues. Fix them before creating a Tripo task."
+    exit 2
+  elif [[ $preflight_code -ne 0 ]]; then
+    exit "$preflight_code"
+  fi
+
+  echo
+  echo "Generation will create a real Tripo task and may spend credits."
+  echo "Review workspace/preflight_report.md and workspace/production_plan.json before continuing."
+  if [[ "$auto_yes" != "true" ]]; then
+    read -r -p "Continue with real generation? [y/N] " answer
+    case "$answer" in
+      y|Y|yes|YES) ;;
+      *)
+        echo "Stopped before generation."
+        exit 0
         ;;
     esac
-  done
+  fi
 
   (cd "$ROOT" && node scripts/generate_game_asset.mjs "${input_args[@]}")
   (cd "$ROOT" && node scripts/inspect_game_asset.mjs)
@@ -413,6 +458,10 @@ case "$COMMAND" in
   generate)
     shift
     generate_command "$@"
+    ;;
+  preflight)
+    shift
+    preflight_command "$@"
     ;;
   inspect)
     shift

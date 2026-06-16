@@ -5,13 +5,13 @@ description: Use after planning to execute the real Tripo game asset generation 
 
 # Game Asset Production
 
-Use this skill only after a Production Plan exists.
+Use this skill only after a Production Plan and Preflight Report exist.
 
 This skill has a real Tripo API execution path. Do not mock generation.
 
 ## Input
 
-Production Plan from `game-asset-planning`, written to `workspace/production_plan.json`.
+Production Plan from `game-asset-planning`, written to `workspace/production_plan.json`, and Preflight Report from `game-asset-preflight`.
 
 ## Output: Production Result
 
@@ -29,16 +29,26 @@ Production Plan from `game-asset-planning`, written to `workspace/production_pla
 
 ## Required Command
 
+Preferred full chain:
+
+```bash
+./bin/tripo-agent run --prompt "<game asset request>" --input assets/<reference-image>.png --engine Unity
+```
+
+This runs doctor, planning, preflight, user confirmation, generation, inspection, and packaging.
+
+If running manually, run preflight first:
+
+```bash
+./bin/tripo-agent preflight --input assets/<reference-image>.png --engine Unity
+```
+
+Only continue if blockers are resolved.
+
 Run:
 
 ```bash
 ./bin/tripo-agent generate --input assets/<reference-image>.png
-```
-
-Or run the full chain:
-
-```bash
-./bin/tripo-agent run --prompt "<game asset request>" --input assets/<reference-image>.png --engine Unity
 ```
 
 This creates a real Tripo `image_to_model` task, polls it, downloads task outputs immediately, and writes `workspace/production_result.json`.
@@ -87,6 +97,15 @@ Reason:
 Decision:
 User-facing impact:
 ```
+
+## Current Real-Execution Limits
+
+Be explicit when these are not yet fully automated:
+
+- Rigging is planned and checked as a requirement, but final humanoid rig validation may require Tripo rigging endpoints and Blender/engine-side validation.
+- FBX may require a conversion step when Tripo returns GLB; package GLB as fallback and document the limitation.
+- Multi-view generation is a higher-quality path for characters, but the current default script uses single-image `image_to_model`.
+- Localized edits and modular fit are not full regeneration primitives yet; route them through memory/preflight and do not promise partial mesh surgery.
 
 ## Stop Condition
 

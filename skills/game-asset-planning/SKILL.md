@@ -9,6 +9,8 @@ Use this skill only after an Asset Brief exists.
 
 Planning is the product confirmation layer between "the agent understood me" and "the agent starts spending credits/time."
 
+After planning, always run `game-asset-preflight`. Planning defines what should happen; preflight decides whether the next real Tripo call has enough input quality to be worth the cost.
+
 ## Input
 
 Asset Brief from `game-asset-intake`.
@@ -27,7 +29,8 @@ Always produce:
   "estimated_time": "",
   "risk_points": [],
   "fallback_policy": [],
-  "expected_package": []
+  "expected_package": [],
+  "preflight_questions": []
 }
 ```
 
@@ -122,7 +125,19 @@ Common risks:
 - Metallic materials may need PBR retry.
 - High texture size increases timeout risk.
 - Modular assets need base mesh fit; missing base asset blocks execution.
+- FBX, humanoid rig, and UE Manny compatibility may need post-generation conversion or Blender validation.
+- Single-image characters often fail on unseen back/side details; multi-view input materially improves the call.
+- Unity/Unreal import readiness depends on scale, pivot, material slots, collider/LOD policy, and not only model generation.
+
+## Preflight Questions By Workflow
+
+Ask only the questions that affect this run:
+
+- Character: Do we have front/back/side views? What rig preset? What poly budget? Is face fidelity or runtime topology more important?
+- Prop/weapon: What pivot should the engine use? What real-world scale? Is it held, placed, or pickup-able?
+- Environment: Is this a single set piece or modular kit? Need LOD/collider? What scale reference?
+- Modular part: What is the base asset id/path? Does it need visual fit, socket fit, or topology-compatible fit?
 
 ## Stop Condition
 
-Show the Production Plan before production. Do not start production if the plan has unresolved blocking risks or if the user chose a cheaper tier that changes deliverables.
+Show the Production Plan before preflight. Do not start production if the plan has unresolved blocking risks, preflight blockers, or if the user chose a cheaper tier that changes deliverables.

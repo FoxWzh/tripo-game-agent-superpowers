@@ -83,6 +83,33 @@ function workflowForBrief(brief) {
 }
 
 function planForBrief(brief) {
+  const preflightQuestions = [];
+  if (brief.asset_type === 'character') {
+    preflightQuestions.push(
+      'Can you provide front/back/side views before spending credits?',
+      'Which rig target is required: Unity Humanoid, UE Manny, custom, or none?',
+      'Is face fidelity, silhouette, or runtime topology the priority?'
+    );
+  }
+  if (brief.asset_type === 'weapon' || brief.asset_type === 'prop') {
+    preflightQuestions.push(
+      'What pivot should the engine use: grip, center, or bottom?',
+      'What approximate real-world scale should this asset have?'
+    );
+  }
+  if (brief.asset_type === 'environment') {
+    preflightQuestions.push(
+      'Is this a single set piece or a modular kit?',
+      'Do you need LOD and collider hints for runtime use?'
+    );
+  }
+  if (brief.asset_type === 'modular_part') {
+    preflightQuestions.push(
+      'What base asset id or file path should this attach to?',
+      'Does the result need visual fit, socket fit, or topology-compatible fit?'
+    );
+  }
+
   return {
     asset_id: brief.asset_id,
     workflow_name: brief.asset_type === 'character' ? 'GameReadyCharacter' : `GameReady${brief.asset_type}`,
@@ -105,14 +132,18 @@ function planForBrief(brief) {
     risk_points: [
       'Tripo generation task may fail or rate-limit; retry with backoff.',
       'Rig compatibility still requires engine-side validation.',
-      'Downloaded result URLs can expire; download immediately after task success.'
+      'Downloaded result URLs can expire; download immediately after task success.',
+      'Single-image characters may fail on unseen back/side details; multi-view input is preferred.',
+      'FBX export may require conversion if the Tripo task only returns GLB.'
     ],
     fallback_policy: [
       'If FBX is unavailable, package GLB and document limitation.',
       'If requested quad/face_limit is unsupported, adjust plan before task creation.',
-      'If readiness inspection cannot parse FBX, require Blender for deeper inspection.'
+      'If readiness inspection cannot parse FBX, require Blender for deeper inspection.',
+      'If rigging cannot be validated locally, deliver a static package and mark rig as blocked or roadmap.'
     ],
-    expected_package: ['downloads/', 'readiness_report.md', 'manifest.json', 'import guide']
+    expected_package: ['downloads/', 'readiness_report.md', 'manifest.json', 'import guide'],
+    preflight_questions: preflightQuestions
   };
 }
 

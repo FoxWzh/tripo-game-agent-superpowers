@@ -35,6 +35,13 @@ Run:
 
 ## Readiness Checklist
 
+Every report should separate:
+
+- `passed`: checked locally and passed.
+- `warning`: deliverable usable with documented limitation.
+- `blocked`: cannot present as engine-ready.
+- `roadmap`: important game requirement not automated in this local MVP.
+
 ### Mesh
 
 - Polycount within target.
@@ -66,6 +73,18 @@ Run:
 - Collider hint exists when needed.
 - Import smoke test passes or failure is documented.
 
+### Game Problems Not Solved By Basic GLB Generation
+
+Track these explicitly instead of hiding them:
+
+- Character rig compatibility: Unity Humanoid / UE Manny / custom skeleton.
+- FBX export and texture zip structure.
+- Quad topology guarantee and face budget verification.
+- LOD generation and collider authoring.
+- Pivot/socket placement for weapons and modular attachments.
+- Modular fit to a base character.
+- Localized edits without full regeneration.
+
 ## Repair and Fallback Policy
 
 - 4K texture timeout -> retry once -> downgrade to 2K.
@@ -74,6 +93,8 @@ Run:
 - PBR failed -> deliver basecolor preview plus pending PBR note.
 - FBX export failed -> GLB fallback plus compatibility note.
 - Unity import issue -> include issue report and import workaround.
+- Missing rig automation -> deliver static model package and mark rig as blocked or roadmap.
+- Missing FBX conversion -> deliver GLB fallback and mark FBX as blocked or pending conversion.
 
 ## Package Schema
 
