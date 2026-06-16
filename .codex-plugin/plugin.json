@@ -1,0 +1,35 @@
+{
+  "name": "tripo-game-agent-superpowers",
+  "version": "0.1.0",
+  "description": "A Superpowers-style local portfolio plugin for a Tripo Game Asset Agent product proposal.",
+  "author": {
+    "name": "FOX Wu"
+  },
+  "homepage": "https://foxwzh.github.io",
+  "keywords": [
+    "tripo",
+    "superpowers",
+    "game-assets",
+    "3d-generation",
+    "portfolio"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Tripo Game Agent Superpowers",
+    "shortDescription": "Superpowers-style PM portfolio for game-ready Tripo assets.",
+    "longDescription": "Tripo Game Agent Superpowers turns FOX's game-asset-focused Tripo Agent product proposal into a local, installable interview demo. It uses a Superpowers-style bootstrap skill plus composable game asset skills to demonstrate intake, planning, production, readiness review, fallback, packaging, and asset memory.",
+    "developerName": "FOX Wu",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read"
+    ],
+    "websiteURL": "https://foxwzh.github.io",
+    "defaultPrompt": [
+      "Run /tripo-agent demo game-character",
+      "Run /tripo-agent ask \"Unity 里用的机甲角色，quad mesh，15k 面\"",
+      "Explain the Tripo Game Agent Superpowers architecture"
+    ],
+    "brandColor": "#0F766E"
+  }
+}
