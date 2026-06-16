@@ -28,7 +28,8 @@ async function download(url, filePath) {
 }
 
 function buildPayload({ args, production, plan }) {
-  const format = normalizeFormat(args.format || plan.parameters?.format || 'FBX');
+  const exportRoute = plan.export_route || {};
+  const format = normalizeFormat(args.format || exportRoute.preferred_format || plan.parameters?.format || 'FBX');
   const originalTaskId = args['task-id'] || production.task_id;
   if (!originalTaskId) {
     throw new Error('Missing original Tripo task id. Pass --task-id or run generation first.');
@@ -45,7 +46,9 @@ function buildPayload({ args, production, plan }) {
   if (args.quad || plan.tripo_params?.quad) payload.quad = Boolean(args.quad || plan.tripo_params?.quad);
   if (args['pivot-to-center-bottom'] || plan.parameters?.engine === 'Unity') payload.pivot_to_center_bottom = true;
   if (args['texture-format']) payload.texture_format = args['texture-format'];
+  else if (exportRoute.texture_format) payload.texture_format = exportRoute.texture_format;
   if (args['fbx-preset']) payload.fbx_preset = args['fbx-preset'];
+  else if (exportRoute.fbx_preset && format === 'FBX') payload.fbx_preset = exportRoute.fbx_preset;
 
   return payload;
 }
@@ -95,6 +98,7 @@ async function main() {
     source_task_id: production.task_id,
     conversion_task_id: taskId,
     format: payload.format,
+    export_route: plan.export_route || null,
     downloads,
     task
   };

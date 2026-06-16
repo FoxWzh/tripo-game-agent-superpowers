@@ -179,6 +179,8 @@ function renderMarkdown(report) {
     `Estimated credits: ${report.cost.estimated_credits}`,
     `Estimated time: ${report.cost.estimated_time}`,
     `Model route: ${report.model_route?.model_family || 'unknown'} / ${report.model_route?.task_type || 'unknown'}`,
+    `Export route: ${report.export_route?.preferred_format || 'unknown'} -> fallback ${report.export_route?.fallback_format || 'unknown'}`,
+    `Rig route: ${report.rig_route?.required ? `${report.rig_route.preset} (precheck required)` : 'not required'}`,
     `View strategy: ${report.image.view_strategy?.strategy || 'unknown'}`,
     '',
     '## Missing Or Blocking',
@@ -220,6 +222,8 @@ async function main() {
     engine,
     input_inventory: inventory,
     model_route: plan.model_route || null,
+    export_route: plan.export_route || null,
+    rig_route: plan.rig_route || null,
     cost,
     next_action: cost.recommendation === 'block'
       ? '补齐 blocker 后重新运行 preflight。'

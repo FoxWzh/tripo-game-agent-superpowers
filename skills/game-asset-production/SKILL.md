@@ -97,6 +97,22 @@ Game defaults:
 - Godot static asset: `GLTF` or `GLB` fallback.
 - Roblox/mobile prototype: low-poly `FBX` or `GLB` depending pipeline.
 
+## Rigging Route
+
+For character assets, run pre-rig check before auto-rig:
+
+```bash
+./bin/tripo-agent rig --preset unity-humanoid
+```
+
+Only if the user confirms:
+
+```bash
+./bin/tripo-agent rig --preset unity-humanoid --apply
+```
+
+The rig command uses Tripo `animate_prerigcheck` before `animate_rig`, downloads rigged files under `outputs/<asset_id>/rigged/`, and opens them for confirmation.
+
 ### Mesh Optimization
 
 Rules:
@@ -147,6 +163,7 @@ User-facing impact:
 Be explicit when these are not yet fully automated:
 
 - Rigging is planned and checked as a requirement, but final humanoid rig validation may require Tripo rigging endpoints and Blender/engine-side validation.
+- Rigging has a command path, but auto-rig should remain user-confirmed because it can spend credits and may fail on non-humanoid shapes.
 - FBX should be attempted through Tripo conversion when requested by the engine; package GLB as fallback if conversion fails.
 - Multi-view generation is a higher-quality path for characters when real or accepted generated views exist.
 - `multiview_to_model` is supported when inventory/model_route selects it, but generated multiview views still need user acceptance before 3D.

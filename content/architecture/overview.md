@@ -143,7 +143,10 @@ Tools are real local scripts. Tripo generation is executed through the public AP
 - `scripts/preflight_game_asset.mjs`
 - `scripts/generate_game_asset.mjs`
 - `scripts/convert_model.mjs`
+- `scripts/rig_model.mjs`
 - `scripts/inspect_game_asset.mjs`
+- `scripts/deep_readiness_check.mjs`
+- `scripts/blender_inspect.py`
 - `scripts/package_engine_asset.mjs`
 
 ## Current MVP Boundaries
@@ -156,13 +159,15 @@ Real today:
 - Multiview-to-model payload path when user/generator views exist.
 - Real image-to-model task creation, polling, downloads.
 - Real convert_model task for FBX/OBJ/STL/GLTF-style export when requested.
+- Rig precheck / auto-rig command path with user confirmation.
 - GLB/PBR file inspection and package creation.
+- Blender deep readiness and engine import checklist path.
 - Preflight report and user confirmation before spending credits.
 - Auto-open downloaded image/model artifacts for user confirmation.
 
 Not fully automated yet:
 
-- Humanoid rig validation and UE Manny compatibility.
+- Engine-side humanoid retarget validation and UE Manny compatibility.
 - Full texture zip normalization and engine import presets.
 - Strong quad topology and face budget verification.
 - LOD/collider generation.

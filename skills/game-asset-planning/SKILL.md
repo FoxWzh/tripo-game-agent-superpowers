@@ -23,6 +23,8 @@ Always produce:
 {
   "workflow_name": "GameReadyCharacter|GameReadyProp|GameReadyWeapon|GameReadyEnvironment|ModularGameAsset",
   "model_route": {},
+  "export_route": {},
+  "rig_route": {},
   "dag": [],
   "parameters": {},
   "execution_tiers": [],
@@ -69,6 +71,47 @@ Production Plan must include:
 ```
 
 ## Workflow Templates
+
+## Export Routing
+
+Add an `export_route` so conversion is not guessed at command time:
+
+```json
+{
+  "preferred_format": "FBX|GLB|GLTF|OBJ|STL|3MF|USDZ",
+  "fallback_format": "GLB",
+  "needs_conversion": true,
+  "conversion_task_type": "convert_model",
+  "texture_format": "png",
+  "fbx_preset": "blender",
+  "reason": []
+}
+```
+
+Defaults:
+
+- Unity character/weapon: FBX, fallback GLB.
+- Unity static prop: GLB, fallback FBX.
+- Unreal character/static mesh: FBX.
+- Godot static/runtime asset: GLB/GLTF.
+- Roblox/mobile prototype: FBX or GLB with low-poly checks.
+
+## Rig Routing
+
+Add a `rig_route` for character assets:
+
+```json
+{
+  "required": true,
+  "preset": "unity-humanoid|ue-manny|custom|none",
+  "precheck_required": true,
+  "auto_rig_supported": true,
+  "task_sequence": ["animate_prerigcheck", "animate_rig", "convert_model"],
+  "human_confirmation_required": true
+}
+```
+
+Do not auto-rig without explicit user confirmation. Run pre-rig check first.
 
 ### GameReadyCharacter
 

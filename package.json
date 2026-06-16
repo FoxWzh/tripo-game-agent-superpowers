@@ -12,6 +12,8 @@
     "preflight": "node scripts/preflight_game_asset.mjs",
     "generate": "node scripts/generate_game_asset.mjs",
     "convert": "node scripts/convert_model.mjs",
+    "rig": "node scripts/rig_model.mjs",
+    "deep-check": "node scripts/deep_readiness_check.mjs",
     "inspect": "node scripts/inspect_game_asset.mjs",
     "package-asset": "node scripts/package_engine_asset.mjs"
   },

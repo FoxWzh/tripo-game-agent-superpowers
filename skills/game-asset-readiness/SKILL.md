@@ -18,6 +18,7 @@ Run:
 ```bash
 ./bin/tripo-agent inspect
 ./bin/tripo-agent convert --format FBX, if target engine needs FBX and conversion has not run yet
+./bin/tripo-agent deep-check --engine Unity, for Blender/engine import readiness checklist
 ./bin/tripo-agent package-asset --engine unity
 ```
 
@@ -74,6 +75,8 @@ Every report should separate:
 - Collider hint exists when needed.
 - Import smoke test passes or failure is documented.
 - Converted format exists when requested by the Production Plan.
+- Blender deep readiness passes or is explicitly skipped with install instructions.
+- Engine import checklist is present.
 
 ### Game Problems Not Solved By Basic GLB Generation
 
@@ -97,6 +100,8 @@ Track these explicitly instead of hiding them:
 - Unity import issue -> include issue report and import workaround.
 - Missing rig automation -> deliver static model package and mark rig as blocked or roadmap.
 - Failed FBX conversion -> deliver GLB fallback and mark FBX as `fallback_used`.
+- Missing Blender -> keep basic readiness, include `deep_readiness_report.json` with skipped status.
+- Rig precheck failed -> do not auto-rig; deliver static model with rig failure notes.
 
 ## Package Schema
 

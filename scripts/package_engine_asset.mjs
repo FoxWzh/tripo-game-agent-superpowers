@@ -35,6 +35,12 @@ async function main() {
     conversion: fs.existsSync(path.join(outDir, 'conversion_result.json'))
       ? readJson(path.join(outDir, 'conversion_result.json'), {})
       : null,
+    rig: fs.existsSync(path.join(outDir, 'rig_result.json'))
+      ? readJson(path.join(outDir, 'rig_result.json'), {})
+      : null,
+    deep_readiness: fs.existsSync(path.join(outDir, 'deep_readiness_report.json'))
+      ? readJson(path.join(outDir, 'deep_readiness_report.json'), {})
+      : null,
     packaged_at: new Date().toISOString(),
     readiness_status: readiness.status,
     files: production.downloads || []
@@ -56,7 +62,8 @@ async function main() {
   const zip = new AdmZip();
   addDirectory(zip, path.join(outDir, 'downloads'), 'models');
   addDirectory(zip, path.join(outDir, 'converted'), 'models');
-  for (const file of ['manifest.json', 'readiness_report.json', 'readiness_report.md', `import_${engine}.md`, 'task_result.json', 'production_result.json', 'conversion_result.json', 'conversion_task_result.json']) {
+  addDirectory(zip, path.join(outDir, 'rigged'), 'models');
+  for (const file of ['manifest.json', 'readiness_report.json', 'readiness_report.md', `import_${engine}.md`, 'task_result.json', 'production_result.json', 'conversion_result.json', 'conversion_task_result.json', 'rig_result.json', 'rig_precheck_task_result.json', 'rig_task_result.json', 'deep_readiness_report.json', 'blender_readiness_report.json']) {
     const full = path.join(outDir, file);
     if (fs.existsSync(full)) zip.addLocalFile(full, file.endsWith('.md') || file.includes('report') ? 'reports' : '');
   }

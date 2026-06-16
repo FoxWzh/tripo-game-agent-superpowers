@@ -72,7 +72,9 @@ outputs/<asset_id>/
 ./bin/tripo-agent preflight --input assets/mecha.png --engine Unity --poly-budget 15000 --rig-preset unity-humanoid
 ./bin/tripo-agent generate --input assets/mecha.png
 ./bin/tripo-agent convert --format FBX
+./bin/tripo-agent rig --preset unity-humanoid
 ./bin/tripo-agent inspect
+./bin/tripo-agent deep-check --engine Unity
 ./bin/tripo-agent package-asset --engine unity
 ```
 
@@ -219,6 +221,8 @@ game-asset-intake
 
 - workflow template
 - model routing: P1 / H3 / H2 / Turbo / v1.4
+- export route: preferred format, fallback format, conversion reason
+- rig route: pre-rig check, rig preset, auto-rig confirmation
 - cost/time estimate
 - execution tiers
 - risk points
@@ -269,6 +273,8 @@ game-asset-intake
 - multiview_to_model 路线支持
 - Tripo task 轮询和下载
 - Tripo conversion API 转 FBX/OBJ/STL/GLTF 等格式
+- rig precheck / auto-rig 命令入口
+- Blender deep readiness / engine import checklist
 - GLB/PBR 结果基础检查
 - Unity package zip
 - 生成前 preflight 和确认门
@@ -276,8 +282,8 @@ game-asset-intake
 
 已纳入流程但未完全自动化：
 
-- Unity Humanoid / UE Manny rig 验证
-- 贴图 zip 结构和完整 engine import preset
+- Unity Humanoid / UE Manny 的引擎内 retarget 验证
+- 贴图 zip 结构和完整 Unity/Unreal import preset
 - quad 拓扑和 face budget 的强验证
 - LOD/collider 自动生成
 - weapon grip pivot / socket 精确验证

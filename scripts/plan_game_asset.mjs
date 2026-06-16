@@ -117,9 +117,9 @@ function workflowForBrief(brief, modelRoute) {
       `Retopo(mode=quad,target=${brief.poly_budget})`,
       'UVUnwrap',
       'PBRTexture(workflow=metal-rough,size=2K)',
-      `Rig(type=${brief.engine === 'Unreal' ? 'UE Manny compatible if requested' : 'Unity humanoid'})`,
+      `RigRoute(type=${brief.engine === 'Unreal' ? 'UE Manny compatible if requested' : 'Unity humanoid'})`,
       'ReadinessReview',
-      `Export${brief.format}`
+      `Convert(format=${brief.format})`
     ];
   }
   if (brief.asset_type === 'weapon') {
@@ -134,8 +134,77 @@ function workflowForBrief(brief, modelRoute) {
   return [`${inputStep}(model=${modelRoute.model_family})`, 'Retopo', 'UVUnwrap', 'PBRTexture', 'PivotScaleCheck', 'ReadinessReview', `Export${brief.format}`];
 }
 
-function planForBrief(brief, { inventory = null, tier = 'Standard', model = null } = {}) {
+function buildExportRoute(brief) {
+  const engine = brief.engine;
+  const assetType = brief.asset_type;
+  let preferredFormat = brief.format || 'GLB';
+  let fallbackFormat = 'GLB';
+  const reasons = [];
+
+  if (engine === 'Unity') {
+    if (assetType === 'character' || assetType === 'weapon') {
+      preferredFormat = 'FBX';
+      reasons.push('Unity character/weapon pipelines commonly expect FBX for rig, sockets, and import settings.');
+    } else {
+      preferredFormat = 'GLB';
+      fallbackFormat = 'FBX';
+      reasons.push('Unity static props can use GLB for fast import; FBX remains fallback for older pipelines.');
+    }
+  } else if (engine === 'Unreal') {
+    preferredFormat = 'FBX';
+    reasons.push('Unreal skeletal/static mesh pipelines usually accept FBX as the safest interchange format.');
+  } else if (engine === 'Godot') {
+    preferredFormat = assetType === 'character' ? 'GLTF' : 'GLB';
+    fallbackFormat = 'FBX';
+    reasons.push('Godot favors GLTF/GLB for scene/material import.');
+  } else if (engine === 'Roblox') {
+    preferredFormat = 'FBX';
+    fallbackFormat = 'GLB';
+    reasons.push('Roblox/game prototype pipelines need low-poly interchange with strict budget checks.');
+  }
+
+  return {
+    preferred_format: preferredFormat,
+    fallback_format: fallbackFormat,
+    needs_conversion: true,
+    conversion_task_type: 'convert_model',
+    texture_format: 'png',
+    fbx_preset: 'blender',
+    reason: reasons.length ? reasons : [`${engine} ${assetType} export route inferred from format ${preferredFormat}.`]
+  };
+}
+
+function buildRigRoute(brief, args = {}) {
+  const rigPreset = args['rig-preset'] || (brief.engine === 'Unreal' ? 'ue-manny' : 'unity-humanoid');
+  if (!brief.rig_required || rigPreset === 'none') {
+    return {
+      required: false,
+      preset: 'none',
+      precheck_required: false,
+      auto_rig_supported: false,
+      reason: ['Asset does not require rigging for the selected workflow.']
+    };
+  }
+
+  return {
+    required: true,
+    preset: rigPreset,
+    precheck_required: true,
+    auto_rig_supported: true,
+    task_sequence: ['animate_prerigcheck', 'animate_rig', 'convert_model'],
+    output_format: 'FBX',
+    human_confirmation_required: true,
+    reason: [
+      'Character game-readiness depends on skeleton and skinning, not just mesh generation.',
+      'Run pre-rig check before spending rigging credits.'
+    ]
+  };
+}
+
+function planForBrief(brief, { inventory = null, tier = 'Standard', model = null, args = {} } = {}) {
   const modelRoute = routeModel({ brief, inventory, tier, model });
+  const exportRoute = buildExportRoute(brief);
+  const rigRoute = buildRigRoute(brief, args);
   const preflightQuestions = [];
   if (brief.asset_type === 'character') {
     preflightQuestions.push(
@@ -168,10 +237,13 @@ function planForBrief(brief, { inventory = null, tier = 'Standard', model = null
     workflow_name: brief.asset_type === 'character' ? 'GameReadyCharacter' : `GameReady${brief.asset_type}`,
     dag: workflowForBrief(brief, modelRoute),
     model_route: modelRoute,
+    export_route: exportRoute,
+    rig_route: rigRoute,
     input_inventory: inventory,
     parameters: {
       engine: brief.engine,
       format: brief.format,
+      preferred_export_format: exportRoute.preferred_format,
       poly_budget: brief.poly_budget,
       texture_size: brief.texture_size,
       rig_required: brief.rig_required
@@ -190,7 +262,8 @@ function planForBrief(brief, { inventory = null, tier = 'Standard', model = null
       'Downloaded result URLs can expire; download immediately after task success.',
       'Single-image characters may fail on unseen back/side details; multi-view input is preferred.',
       'FBX export may require conversion if the Tripo task only returns GLB.',
-      'Model route should be revisited if user provides more views or changes tier.'
+      'Model route should be revisited if user provides more views or changes tier.',
+      ...(rigRoute.required ? ['Rig route requires pre-rig check before auto-rigging credits are spent.'] : [])
     ],
     fallback_policy: [
       'If FBX is unavailable, package GLB and document limitation.',
@@ -198,7 +271,7 @@ function planForBrief(brief, { inventory = null, tier = 'Standard', model = null
       'If readiness inspection cannot parse FBX, require Blender for deeper inspection.',
       'If rigging cannot be validated locally, deliver a static package and mark rig as blocked or roadmap.'
     ],
-    expected_package: ['downloads/', 'readiness_report.md', 'manifest.json', 'import guide'],
+    expected_package: ['downloads/', 'converted/', 'readiness_report.md', 'manifest.json', 'import guide'],
     preflight_questions: preflightQuestions
   };
 }
@@ -220,7 +293,8 @@ async function main() {
   const plan = planForBrief(brief, {
     inventory,
     tier: args.tier || 'Standard',
-    model: args.model || args['model-family']
+    model: args.model || args['model-family'],
+    args
   });
   writeJson(args.brief || path.join(workspaceDir, 'asset_brief.json'), brief);
   writeJson(args.plan || path.join(workspaceDir, 'production_plan.json'), plan);

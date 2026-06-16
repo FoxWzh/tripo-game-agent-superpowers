@@ -58,6 +58,8 @@ workspace/preflight_report.json
 workspace/generation_request.json
 workspace/production_result.json
 workspace/conversion_result.json
+workspace/rig_result.json
+workspace/deep_readiness_report.json
 workspace/readiness_report.json
 workspace/package_result.json
 outputs/<asset_id>/

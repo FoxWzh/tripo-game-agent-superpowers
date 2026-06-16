@@ -18,6 +18,8 @@ Usage:
   tripo-agent preflight --input assets/ref.png [--front assets/front.png --back assets/back.png]
   tripo-agent generate --input assets/ref.png
   tripo-agent convert --format FBX
+  tripo-agent rig [--preset unity-humanoid] [--apply]
+  tripo-agent deep-check [--engine Unity]
   tripo-agent inspect
   tripo-agent package-asset [--engine unity]
   tripo-agent run --prompt "<游戏资产需求>" --input assets/ref.png [--engine Unity] [--format FBX] [--yes]
@@ -316,6 +318,8 @@ PPT 只能描述方案；这个 Superpowers 风格插件能让面试官亲手体
 - `game-asset-intake` 如何补齐游戏引擎约束
 - `game-asset-planning` 为什么要在执行前展示 credit、时间和风险
 - Tripo conversion API 如何补齐 FBX 等游戏导出格式
+- Rig precheck / auto-rig 路线如何保护角色资产 credit
+- Blender / engine import readiness 如何补齐游戏验收
 - `game-asset-readiness` 如何把生成结果验收为游戏可用资产
 - `game-asset-memory` 如何支持改稿和系列复用
 
@@ -378,6 +382,14 @@ preflight_command() {
   (cd "$ROOT" && node scripts/preflight_game_asset.mjs "$@")
 }
 
+rig_command() {
+  (cd "$ROOT" && node scripts/rig_model.mjs "$@")
+}
+
+deep_check_command() {
+  (cd "$ROOT" && node scripts/deep_readiness_check.mjs "$@")
+}
+
 inspect_command() {
   (cd "$ROOT" && node scripts/inspect_game_asset.mjs "$@")
 }
@@ -400,7 +412,7 @@ run_command() {
   local input_args=()
   local engine_args=()
   local convert_args=()
-  local conversion_format="FBX"
+  local conversion_format=""
   local preflight_args=()
   local inventory_args=()
   local plan_args=()
@@ -500,7 +512,11 @@ run_command() {
   (cd "$ROOT" && node scripts/generate_game_asset.mjs "${input_args[@]}")
   if [[ ! " ${args[*]} " =~ " --no-convert " ]]; then
     set +e
-    (cd "$ROOT" && node scripts/convert_model.mjs --format "$conversion_format" "${convert_args[@]}")
+    if [[ -n "$conversion_format" ]]; then
+      (cd "$ROOT" && node scripts/convert_model.mjs --format "$conversion_format" "${convert_args[@]}")
+    else
+      (cd "$ROOT" && node scripts/convert_model.mjs "${convert_args[@]}")
+    fi
     local convert_code=$?
     set -e
     if [[ $convert_code -ne 0 ]]; then
@@ -508,6 +524,13 @@ run_command() {
     fi
   fi
   (cd "$ROOT" && node scripts/inspect_game_asset.mjs)
+  set +e
+  (cd "$ROOT" && node scripts/deep_readiness_check.mjs "${engine_args[@]}")
+  local deep_code=$?
+  set -e
+  if [[ $deep_code -ne 0 ]]; then
+    echo "Deep readiness check failed; continuing with basic readiness report."
+  fi
   (cd "$ROOT" && node scripts/package_engine_asset.mjs "${engine_args[@]}")
 }
 
@@ -547,6 +570,14 @@ case "$COMMAND" in
   convert)
     shift
     convert_command "$@"
+    ;;
+  rig)
+    shift
+    rig_command "$@"
+    ;;
+  deep-check)
+    shift
+    deep_check_command "$@"
     ;;
   preflight)
     shift

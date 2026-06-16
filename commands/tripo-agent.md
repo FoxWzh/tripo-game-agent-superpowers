@@ -50,6 +50,9 @@ Do not choose a Tripo model before the user's available input assets are known.
 - `inventory --input assets/ref.png`: inventory user inputs and decide view strategy.
 - `synthesize-views --input assets/ref.png`: generate candidate multiview images after user confirmation.
 - `preflight --input assets/ref.png`: inspect missing inputs and credit risks before generation.
+- `convert --format FBX`: convert generated model using Tripo conversion route.
+- `rig --preset unity-humanoid`: run rig precheck; add `--apply` only after confirmation.
+- `deep-check --engine Unity`: run Blender/engine import readiness checks.
 - `architecture`: explain the Superpowers-style skill architecture.
 - `about`: show candidate context and interviewer walkthrough.
 
@@ -69,6 +72,9 @@ workspace/production_plan.json
 workspace/preflight_report.json
 workspace/generation_request.json
 workspace/production_result.json
+workspace/conversion_result.json
+workspace/rig_result.json
+workspace/deep_readiness_report.json
 workspace/readiness_report.json
 workspace/package_result.json
 outputs/<asset_id>/
