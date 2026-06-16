@@ -35,7 +35,7 @@ Preferred full chain:
 ./bin/tripo-agent run --prompt "<game asset request>" --input assets/<reference-image>.png --engine Unity
 ```
 
-This runs doctor, planning, preflight, user confirmation, generation, inspection, and packaging.
+This runs doctor, planning, preflight, user confirmation, generation, optional conversion, inspection, and packaging.
 
 If running manually, run preflight first:
 
@@ -52,6 +52,32 @@ Run:
 ```
 
 This creates a real Tripo `image_to_model` task, polls it, downloads task outputs immediately, and writes `workspace/production_result.json`.
+
+## User Confirmation UI
+
+After any generated image or 3D file is downloaded, open the best local artifact automatically so the user can confirm it:
+
+- image preview: `png`, `jpg`, `webp`
+- model preview: `glb`, `gltf`, `fbx`, `obj`
+
+Use `--no-open` or `TRIPO_AGENT_NO_OPEN=1` only for CI or headless runs.
+
+## Format Conversion
+
+When the target engine expects FBX/OBJ/STL/GLTF rather than the source downloaded model, use Tripo conversion:
+
+```bash
+./bin/tripo-agent convert --format FBX
+```
+
+This creates a `convert_model` task using the original Tripo model task id, polls it, downloads converted files under `outputs/<asset_id>/converted/`, and opens the converted asset for confirmation.
+
+Game defaults:
+
+- Unity character/weapon: prefer `FBX`.
+- Unreal character/weapon: prefer `FBX`.
+- Godot static asset: `GLTF` or `GLB` fallback.
+- Roblox/mobile prototype: low-poly `FBX` or `GLB` depending pipeline.
 
 ### Mesh Optimization
 
@@ -103,7 +129,7 @@ User-facing impact:
 Be explicit when these are not yet fully automated:
 
 - Rigging is planned and checked as a requirement, but final humanoid rig validation may require Tripo rigging endpoints and Blender/engine-side validation.
-- FBX may require a conversion step when Tripo returns GLB; package GLB as fallback and document the limitation.
+- FBX should be attempted through Tripo conversion when requested by the engine; package GLB as fallback if conversion fails.
 - Multi-view generation is a higher-quality path for characters, but the current default script uses single-image `image_to_model`.
 - Localized edits and modular fit are not full regeneration primitives yet; route them through memory/preflight and do not promise partial mesh surgery.
 

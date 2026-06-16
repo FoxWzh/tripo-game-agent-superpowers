@@ -113,6 +113,7 @@ Tools are real local scripts. Tripo generation is executed through the public AP
 - `scripts/plan_game_asset.mjs`
 - `scripts/preflight_game_asset.mjs`
 - `scripts/generate_game_asset.mjs`
+- `scripts/convert_model.mjs`
 - `scripts/inspect_game_asset.mjs`
 - `scripts/package_engine_asset.mjs`
 
@@ -122,13 +123,15 @@ Real today:
 
 - API key and dependency checks.
 - Real image-to-model task creation, polling, downloads.
+- Real convert_model task for FBX/OBJ/STL/GLTF-style export when requested.
 - GLB/PBR file inspection and package creation.
 - Preflight report and user confirmation before spending credits.
+- Auto-open downloaded image/model artifacts for user confirmation.
 
 Not fully automated yet:
 
 - Humanoid rig validation and UE Manny compatibility.
-- FBX conversion and texture zip normalization.
+- Full texture zip normalization and engine import presets.
 - Strong quad topology and face budget verification.
 - LOD/collider generation.
 - Modular fit to an existing character.

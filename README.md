@@ -15,6 +15,8 @@ FOX 应聘 Tripo Agent Product Manager 的游戏资产方向面试作品。
 - Agent 如何生成制作方案、成本和风险
 - Agent 如何在花 credit 前判断还缺什么、补什么最值
 - Agent 如何真实调用 Tripo 生成、下载模型、检查、打包
+- Agent 如何用 Tripo conversion API 转成 FBX/OBJ/STL 等引擎需要的格式
+- Agent 如何在生成图片或 3D 后自动打开文件让用户确认
 - Agent 如何把资产记忆保存为后续改稿和系列复用基础
 
 不允许 mock 生成。没有 `TRIPO_API_KEY` 时不能运行真实生成。
@@ -66,6 +68,7 @@ outputs/<asset_id>/
 ./bin/tripo-agent plan --prompt "Unity 里用的机甲角色，quad mesh，15k 面" --engine Unity
 ./bin/tripo-agent preflight --input assets/mecha.png --engine Unity --poly-budget 15000 --rig-preset unity-humanoid
 ./bin/tripo-agent generate --input assets/mecha.png
+./bin/tripo-agent convert --format FBX
 ./bin/tripo-agent inspect
 ./bin/tripo-agent package-asset --engine unity
 ```
@@ -78,6 +81,7 @@ workspace/preflight_report.md
 ```
 
 如果你已经确认风险并想录屏时跳过交互，可以加 `--yes`。
+如果不想自动打开生成文件，可以加 `--no-open`，或设置 `TRIPO_AGENT_NO_OPEN=1`。
 
 ## 安装到 Claude Code
 
@@ -217,14 +221,16 @@ game-asset-intake
 - API key/依赖检查
 - image-to-model 真实调用
 - Tripo task 轮询和下载
+- Tripo conversion API 转 FBX/OBJ/STL/GLTF 等格式
 - GLB/PBR 结果基础检查
 - Unity package zip
 - 生成前 preflight 和确认门
+- 生成图片或 3D 后自动打开产物供用户确认
 
 已纳入流程但未完全自动化：
 
 - Unity Humanoid / UE Manny rig 验证
-- FBX 转换与贴图 zip 结构
+- 贴图 zip 结构和完整 engine import preset
 - quad 拓扑和 face budget 的强验证
 - LOD/collider 自动生成
 - weapon grip pivot / socket 精确验证

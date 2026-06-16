@@ -55,10 +55,13 @@ workspace/production_plan.json
 workspace/preflight_report.json
 workspace/generation_request.json
 workspace/production_result.json
+workspace/conversion_result.json
 workspace/readiness_report.json
 workspace/package_result.json
 outputs/<asset_id>/
 ```
+
+After generating images or 3D files, open the local artifact for user confirmation unless `--no-open` or `TRIPO_AGENT_NO_OPEN=1` is set.
 
 ## Interview Positioning
 

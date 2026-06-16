@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
@@ -76,4 +77,30 @@ export function parseArgs(argv) {
     }
   }
   return result;
+}
+
+export function openFile(filePath) {
+  if (!filePath || process.env.TRIPO_AGENT_NO_OPEN === '1') return;
+  const resolved = path.resolve(filePath);
+  if (!fs.existsSync(resolved)) return;
+
+  const opener = process.platform === 'darwin'
+    ? 'open'
+    : process.platform === 'win32'
+      ? 'cmd'
+      : 'xdg-open';
+  const args = process.platform === 'win32'
+    ? ['/c', 'start', '', resolved]
+    : [resolved];
+
+  const child = spawn(opener, args, {
+    detached: true,
+    stdio: 'ignore'
+  });
+  child.unref();
+}
+
+export function shouldOpenArtifacts(args = {}) {
+  if (args['no-open']) return false;
+  return process.env.TRIPO_AGENT_NO_OPEN !== '1';
 }

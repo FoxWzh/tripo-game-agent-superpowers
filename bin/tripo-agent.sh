@@ -15,9 +15,10 @@ Usage:
   tripo-agent plan --prompt "<游戏资产需求>" [--input assets/ref.png]
   tripo-agent preflight --input assets/ref.png [--front assets/front.png --back assets/back.png]
   tripo-agent generate --input assets/ref.png
+  tripo-agent convert --format FBX
   tripo-agent inspect
   tripo-agent package-asset [--engine unity]
-  tripo-agent run --prompt "<游戏资产需求>" --input assets/ref.png [--engine Unity] [--yes]
+  tripo-agent run --prompt "<游戏资产需求>" --input assets/ref.png [--engine Unity] [--format FBX] [--yes]
   tripo-agent ask "<游戏资产需求>"
   tripo-agent stories [id]
   tripo-agent architecture [skill-pool|composite|routing|eval]
@@ -146,6 +147,7 @@ ask_command() {
       "skill_order": [
         "game-asset-intake",
         "game-asset-planning",
+        "game-asset-preflight",
         "game-asset-production",
         "game-asset-readiness",
         "game-asset-memory"
@@ -307,6 +309,7 @@ PPT 只能描述方案；这个 Superpowers 风格插件能让面试官亲手体
 - `using-tripo-game-agent` 如何强制方法论
 - `game-asset-intake` 如何补齐游戏引擎约束
 - `game-asset-planning` 为什么要在执行前展示 credit、时间和风险
+- Tripo conversion API 如何补齐 FBX 等游戏导出格式
 - `game-asset-readiness` 如何把生成结果验收为游戏可用资产
 - `game-asset-memory` 如何支持改稿和系列复用
 
@@ -353,6 +356,10 @@ generate_command() {
   (cd "$ROOT" && node scripts/generate_game_asset.mjs "$@")
 }
 
+convert_command() {
+  (cd "$ROOT" && node scripts/convert_model.mjs "$@")
+}
+
 preflight_command() {
   (cd "$ROOT" && node scripts/preflight_game_asset.mjs "$@")
 }
@@ -379,6 +386,8 @@ run_command() {
 
   local input_args=()
   local engine_args=()
+  local convert_args=()
+  local conversion_format="FBX"
   local preflight_args=()
   local i=0
   while [[ $i -lt ${#args[@]} ]]; do
@@ -397,6 +406,22 @@ run_command() {
         engine_args+=("--engine" "${args[$((i+1))]}")
         preflight_args+=("--engine" "${args[$((i+1))]}")
         i=$((i+2))
+        ;;
+      --format)
+        conversion_format="${args[$((i+1))]}"
+        convert_args+=("${args[$i]}" "${args[$((i+1))]}")
+        i=$((i+2))
+        ;;
+      --texture-format|--fbx-preset)
+        convert_args+=("${args[$i]}" "${args[$((i+1))]}")
+        i=$((i+2))
+        ;;
+      --no-convert|--no-open)
+        convert_args+=("${args[$i]}")
+        if [[ "${args[$i]}" == "--no-open" ]]; then
+          input_args+=("${args[$i]}")
+        fi
+        i=$((i+1))
         ;;
       *)
         i=$((i+1))
@@ -430,6 +455,15 @@ run_command() {
   fi
 
   (cd "$ROOT" && node scripts/generate_game_asset.mjs "${input_args[@]}")
+  if [[ ! " ${args[*]} " =~ " --no-convert " ]]; then
+    set +e
+    (cd "$ROOT" && node scripts/convert_model.mjs --format "$conversion_format" "${convert_args[@]}")
+    local convert_code=$?
+    set -e
+    if [[ $convert_code -ne 0 ]]; then
+      echo "Conversion failed; continuing with downloaded source model as fallback."
+    fi
+  fi
   (cd "$ROOT" && node scripts/inspect_game_asset.mjs)
   (cd "$ROOT" && node scripts/package_engine_asset.mjs "${engine_args[@]}")
 }
@@ -458,6 +492,10 @@ case "$COMMAND" in
   generate)
     shift
     generate_command "$@"
+    ;;
+  convert)
+    shift
+    convert_command "$@"
     ;;
   preflight)
     shift

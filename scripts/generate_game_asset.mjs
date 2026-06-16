@@ -3,7 +3,7 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import { TripoClient, collectDownloadUrls } from './tripo_client.mjs';
-import { ensureDirs, outputsDir, workspaceDir, readJson, writeJson, parseArgs, slugify } from './config.mjs';
+import { ensureDirs, outputsDir, workspaceDir, readJson, writeJson, parseArgs, slugify, openFile, shouldOpenArtifacts } from './config.mjs';
 
 function inferExt(url, fallback = '.bin') {
   try {
@@ -132,6 +132,19 @@ async function main() {
 
   console.log(`Generation complete: ${outDir}`);
   console.log(`Downloaded files: ${downloads.length}`);
+
+  if (shouldOpenArtifacts(args)) {
+    const preview = downloads.find((item) => /\.(png|jpe?g|webp)$/i.test(item.path));
+    const model = downloads.find((item) => /\.(glb|gltf|fbx|obj)$/i.test(item.path));
+    if (preview) {
+      console.log(`Opening preview for confirmation: ${preview.path}`);
+      openFile(preview.path);
+    }
+    if (model) {
+      console.log(`Opening model for confirmation: ${model.path}`);
+      openFile(model.path);
+    }
+  }
 }
 
 main().catch((error) => {

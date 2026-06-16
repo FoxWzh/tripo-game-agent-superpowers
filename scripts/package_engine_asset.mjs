@@ -32,6 +32,9 @@ async function main() {
     asset_id: production.asset_id,
     engine,
     task_id: production.task_id,
+    conversion: fs.existsSync(path.join(outDir, 'conversion_result.json'))
+      ? readJson(path.join(outDir, 'conversion_result.json'), {})
+      : null,
     packaged_at: new Date().toISOString(),
     readiness_status: readiness.status,
     files: production.downloads || []
@@ -52,7 +55,8 @@ async function main() {
 
   const zip = new AdmZip();
   addDirectory(zip, path.join(outDir, 'downloads'), 'models');
-  for (const file of ['manifest.json', 'readiness_report.json', 'readiness_report.md', `import_${engine}.md`, 'task_result.json', 'production_result.json']) {
+  addDirectory(zip, path.join(outDir, 'converted'), 'models');
+  for (const file of ['manifest.json', 'readiness_report.json', 'readiness_report.md', `import_${engine}.md`, 'task_result.json', 'production_result.json', 'conversion_result.json', 'conversion_task_result.json']) {
     const full = path.join(outDir, file);
     if (fs.existsSync(full)) zip.addLocalFile(full, file.endsWith('.md') || file.includes('report') ? 'reports' : '');
   }

@@ -17,6 +17,7 @@ Run:
 
 ```bash
 ./bin/tripo-agent inspect
+./bin/tripo-agent convert --format FBX, if target engine needs FBX and conversion has not run yet
 ./bin/tripo-agent package-asset --engine unity
 ```
 
@@ -72,13 +73,14 @@ Every report should separate:
 - Pivot rule is satisfied.
 - Collider hint exists when needed.
 - Import smoke test passes or failure is documented.
+- Converted format exists when requested by the Production Plan.
 
 ### Game Problems Not Solved By Basic GLB Generation
 
 Track these explicitly instead of hiding them:
 
 - Character rig compatibility: Unity Humanoid / UE Manny / custom skeleton.
-- FBX export and texture zip structure.
+- FBX conversion and texture zip structure.
 - Quad topology guarantee and face budget verification.
 - LOD generation and collider authoring.
 - Pivot/socket placement for weapons and modular attachments.
@@ -94,7 +96,7 @@ Track these explicitly instead of hiding them:
 - FBX export failed -> GLB fallback plus compatibility note.
 - Unity import issue -> include issue report and import workaround.
 - Missing rig automation -> deliver static model package and mark rig as blocked or roadmap.
-- Missing FBX conversion -> deliver GLB fallback and mark FBX as blocked or pending conversion.
+- Failed FBX conversion -> deliver GLB fallback and mark FBX as `fallback_used`.
 
 ## Package Schema
 
