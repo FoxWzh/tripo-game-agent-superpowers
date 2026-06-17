@@ -7,6 +7,7 @@
     "setup": "node scripts/setup.mjs",
     "doctor": "node scripts/doctor.mjs",
     "inventory": "node scripts/inventory_game_asset.mjs",
+    "preview": "node scripts/preview_game_asset.mjs",
     "plan": "node scripts/plan_game_asset.mjs",
     "synthesize-views": "node scripts/synthesize_views.mjs",
     "preflight": "node scripts/preflight_game_asset.mjs",
@@ -15,7 +16,8 @@
     "rig": "node scripts/rig_model.mjs",
     "deep-check": "node scripts/deep_readiness_check.mjs",
     "inspect": "node scripts/inspect_game_asset.mjs",
-    "package-asset": "node scripts/package_engine_asset.mjs"
+    "package-asset": "node scripts/package_engine_asset.mjs",
+    "memory": "node scripts/memory_game_asset.mjs"
   },
   "dependencies": {
     "@gltf-transform/core": "^4.2.1",

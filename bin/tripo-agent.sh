@@ -26,6 +26,7 @@ Usage:
   tripo-agent run --prompt "<游戏资产需求>" --input assets/ref.png [--engine Unity] [--format FBX] [--yes]
   tripo-agent run --prompt "<游戏资产需求>" --front assets/f.png --back assets/b.png [--left assets/l.png --right assets/r.png]
   tripo-agent ask "<游戏资产需求>"
+  tripo-agent memory [list|show <asset_id>]
   tripo-agent stories [id]
   tripo-agent architecture [skill-pool|composite|routing|eval]
   tripo-agent why [discord-summary|personas|method]
@@ -115,195 +116,7 @@ ask_command() {
     exit 1
   fi
 
-  local persona="Game asset user / 意图待澄清"
-  local workflow="需要先澄清"
-  local confidence="0.42"
-  local tags=()
-  local clarify=("目标游戏引擎是 Unity、Unreal、Roblox 还是 Godot？" "资产类型是角色、道具、武器、场景件还是 modular part？")
-  local credits="待澄清后估算"
-  local time="待澄清后估算"
-
-  if [[ "$query" =~ (Unity|Unreal|UE|Roblox|Godot|FBX|fbx|GLB|glb|quad|Quad|rig|Rig|骨骼|游戏|game|角色|机甲|character|humanoid) ]]; then
-    persona="Marcus / 游戏资产用户"
-    workflow="GameReadyCharacter"
-    confidence="0.86"
-    tags=("downstream=game-engine" "format=fbx" "topology=quad" "rig=humanoid")
-    clarify=("目标面数是 15k、8k，还是由 Agent 按平台自动建议？" "需要 Unity humanoid 还是 UE Manny 兼容骨骼？")
-    credits="27-34 credits"
-    time="6-12 min"
-  fi
-
-  if [[ "$query" =~ (武器|剑|枪|刀|斧|weapon|sword|gun|prop|道具|宝箱|药水|pickup) ]]; then
-    persona="Game prop / weapon creator"
-    workflow="GameReadyWeapon"
-    confidence="0.8"
-    tags=("asset_type=weapon_or_prop" "pivot=grip_or_center" "format=fbx_or_glb" "texture=pbr")
-    clarify=("目标引擎是什么？" "武器需要 grip pivot，还是只是静态展示道具？")
-    credits="14-20 credits"
-    time="4-8 min"
-  fi
-
-  if [[ "$query" =~ (盔甲|披风|装备|modular|Modular|之前|上次|同风格|资产包|outfit|armor|attachment) ]]; then
-    persona="Chen / Modular 游戏资产用户"
-    workflow="ModularGameAsset"
-    confidence="0.73"
-    tags=("target=modular-assets" "reference=existing-character" "style=consistent" "fit=topology-aware")
-    clarify=("请提供上一个角色的 asset id 或文件路径。" "这些装备是要可替换穿戴，还是只需要视觉上贴合？")
-    credits="24-45 credits"
-    time="8-18 min"
-  fi
-
-  if [[ "$query" =~ (场景|建筑|石头|树|地形|environment|building|rock|terrain|level) ]]; then
-    persona="Environment asset creator"
-    workflow="GameReadyEnvironment"
-    confidence="0.76"
-    tags=("asset_type=environment" "lod=required" "collider=hint" "format=glb_or_fbx")
-    clarify=("这是单个场景件，还是 modular level kit？" "需要 collider hints 和 LOD 吗？")
-    credits="18-30 credits"
-    time="6-12 min"
-  fi
-
-  if [[ "$query" =~ (随便|不知道|帮我想|都行) ]]; then
-    persona="Game asset user / 意图澄清"
-    workflow="暂不选择工作流"
-    confidence="0.22"
-    tags=("intent=ambiguous")
-    clarify=("目标游戏引擎是什么？" "资产类型是角色、道具、武器、场景件还是 modular part？")
-    credits="不建议估算"
-    time="不建议估算"
-  fi
-
-  local tags_text="${tags[*]:-"intent=unclear"}"
-  cat <<'EOF'
-# /tripo-agent ask
-
-输入：
-
-EOF
-  printf '> %s\n\n' "$query"
-  cat <<'EOF'
-
-## using-tripo-game-agent
-
-    {
-      "stage": "intake",
-      "skill_order": [
-        "game-asset-intake",
-        "game-asset-view-strategy",
-        "game-asset-planning",
-        "game-asset-preflight",
-        "game-asset-production",
-        "game-asset-readiness",
-        "game-asset-memory"
-      ]
-    }
-
-## game-asset-intake / Asset Brief
-
-EOF
-  printf -- '- 用户画像：%s\n' "$persona"
-  printf -- '- 推荐工作流：%s\n' "$workflow"
-  printf -- '- 置信度：%s\n' "$confidence"
-  printf -- '- 抽取 tags：%s\n' "$tags_text"
-  cat <<'EOF'
-
-## game-asset-planning / Production Plan
-
-规划前会先运行 `game-asset-view-strategy`，盘点用户是单图、多视图、文字还是已有模型，再决定 image_to_model / multiview_to_model / text_to_model 和 P1 / H3 / H2 / Turbo / v1.4 模型路线。
-
-EOF
-
-  case "$workflow" in
-    GameReadyCharacter)
-      cat <<'EOF'
-```text
-ImageTo3D
-  -> Retopo(mode=quad)
-  -> UVUnwrap
-  -> PBRTexture
-  -> Rig
-  -> ReadinessReview
-  -> ExportFBX
-```
-
-理由：游戏引擎目标隐含拓扑、骨骼、材质、格式和导入稳定性，不应让用户自己串工具。
-EOF
-      ;;
-    GameReadyWeapon)
-      cat <<'EOF'
-```text
-ImageTo3D or TextTo3D
-  -> Retopo(target=engine_budget)
-  -> UVUnwrap
-  -> PBRTexture
-  -> GripPivotCheck
-  -> ScaleCheck
-  -> ReadinessReview
-  -> ExportFBX
-```
-
-理由：武器/道具的游戏可用性重点是 pivot、scale、PBR 和导入稳定性，不一定需要 rig。
-EOF
-      ;;
-    GameReadyEnvironment)
-      cat <<'EOF'
-```text
-TextTo3D or ImageTo3D
-  -> Segment
-  -> OptimizeMesh
-  -> GenerateLOD
-  -> PBRTexture
-  -> ColliderHint
-  -> ReadinessReview
-  -> ExportGLB or ExportFBX
-```
-
-理由：场景件更关注 LOD、collider、scale 和批量导入，不应该套角色工作流。
-EOF
-      ;;
-    ModularGameAsset)
-      cat <<'EOF'
-```text
-LoadExistingCharacter
-  -> StyleLock
-  -> GenerateAttachment
-  -> FitToBaseMesh
-  -> TextureMatch
-  -> ReadinessReview
-  -> ExportPack
-```
-
-理由：这里的核心不是单件生成，而是与已有角色保持风格、尺寸和替换关系。
-EOF
-      ;;
-    *)
-      cat <<'EOF'
-暂不执行。当前需求缺少游戏引擎或资产类型，直接生成会制造 credit 风险。
-EOF
-      ;;
-  esac
-
-  cat <<EOF
-
-## 执行前透明度
-
-- 预计 credit：$credits
-- 预计耗时：$time
-- 可选档位：Draft / Standard / Full
-
-## 需要澄清
-
-EOF
-  for item in "${clarify[@]}"; do
-    echo "- $item"
-  done
-
-  cat <<'EOF'
-
-## 真实产品映射
-
-这里对应 Tripo Game Agent 的 intake、view-strategy、planning、preflight、production、readiness、memory 七个 Superpowers。`ask` 只做意图和方案预览；真实生成请使用 `run`，它会在创建 Tripo task 前做 input inventory、model routing、preflight 和人工确认。
-EOF
+  (cd "$ROOT" && node scripts/preview_game_asset.mjs --prompt "$query")
 }
 
 stories_command() {
@@ -434,6 +247,10 @@ package_asset_command() {
   (cd "$ROOT" && node scripts/package_engine_asset.mjs "$@")
 }
 
+memory_command() {
+  (cd "$ROOT" && node scripts/memory_game_asset.mjs "$@")
+}
+
 run_command() {
   local args=("$@")
   local auto_yes="false"
@@ -549,6 +366,11 @@ run_command() {
   echo "Generation will create a real Tripo task and may spend credits."
   echo "Review workspace/preflight_report.md and workspace/production_plan.json before continuing."
   if [[ "$auto_yes" != "true" ]]; then
+    if [[ ! -t 0 ]]; then
+      echo "Non-interactive session detected. Stop after preflight."
+      echo "After user approval, re-run the same command with --yes."
+      exit 0
+    fi
     read -r -p "Continue with real generation? [y/N] " answer
     case "$answer" in
       y|Y|yes|YES) ;;
@@ -663,6 +485,10 @@ case "$COMMAND" in
     ;;
   roadmap)
     roadmap_command
+    ;;
+  memory)
+    shift
+    memory_command "$@"
     ;;
   about)
     about_command

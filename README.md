@@ -2,9 +2,11 @@
 
 [中文说明](./README.zh-CN.md)
 
-A local Superpowers-style agent plugin for turning game-asset goals into executable Tripo workflows.
+A local Superpowers-style agent plugin for turning game-asset goals into protected, engine-ready Tripo workflows.
 
 The project follows the pattern popularized by [`obra/superpowers`](https://github.com/obra/superpowers): `CLAUDE.md` is the boot instruction, `commands/tripo-agent.md` is the slash-command entry, `using-tripo-game-agent` is the bootstrap skill, and the `game-asset-*` skills encode stable workflow knowledge.
+
+The product focus is the agent workflow inside Claude Code or Codex: natural-language intake, cost-aware preflight, readiness checks, fallback decisions, and reusable asset memory. The CLI is the deterministic execution layer the agent calls.
 
 Real generation, format conversion, optional multiview generation, and rig precheck use Tripo APIs. If `TRIPO_API_KEY` is missing, the workflow stops at setup or preflight.
 
@@ -71,7 +73,7 @@ For real generation, put reference files under `assets/` and ask the agent to ru
 /tripo-game-agent-superpowers:tripo-agent run --prompt "Unity-ready mech character, quad mesh, 15k faces, rigged" --input assets/mecha.png --engine Unity
 ```
 
-The agent should run intake, input inventory, planning, preflight, human confirmation, production, readiness review, and packaging in order.
+The agent should run intake, input inventory, planning, preflight, user approval, production, readiness review, packaging, and memory capture in order.
 
 If your Claude Code version does not support plugins, install the legacy slash command instead:
 
@@ -103,7 +105,7 @@ For real API calls, run `./bin/tripo-agent setup` first so the local `.env.local
 
 ## Use The CLI
 
-Use this path when you want deterministic commands, local files, and explicit checkpoints.
+Use this path when you want deterministic commands, local files, and explicit checkpoints. It is also the execution layer used by the agent plugin.
 
 `./bin/tripo-agent` is a portable shell launcher that delegates to `bin/tripo-agent.sh`; it does not require a platform-specific binary.
 
@@ -115,6 +117,7 @@ Use this path when you want deterministic commands, local files, and explicit ch
 ```
 
 This shows the decision flow without creating a Tripo task.
+It writes `workspace/preview_report.md` and `workspace/preview_report.json` with missing inputs, high-value inputs, route recommendation, credit estimate, and next step.
 
 ### Full Guarded Run
 
@@ -146,6 +149,7 @@ doctor
   -> inspect
   -> deep-check
   -> package
+  -> memory
 ```
 
 For automated runs where you already accept the risk:
@@ -227,7 +231,7 @@ Generated views are opened for confirmation. Do not proceed to 3D until the user
 | `doctor` | Check local runtime prerequisites. |
 | `install` | Install the Claude Code plugin through the marketplace manifest. |
 | `install-legacy-command` | Install only the legacy `/tripo-agent` slash command; it will not appear in the plugin list. |
-| `ask "<goal>"` | Parse a game-asset goal without spending credits. |
+| `ask "<goal>"` | Generate a no-credit agent preview: missing inputs, route, credit estimate, risks, and next step. |
 | `architecture` | Explain the Superpowers-style skill architecture. |
 | `inventory ...` | Inspect available single-image, multiview, text, or existing-model inputs. |
 | `plan ...` | Create asset brief, model route, export route, rig route, and production plan. |
@@ -239,6 +243,7 @@ Generated views are opened for confirmation. Do not proceed to 3D until the user
 | `inspect` | Run basic local file readiness checks. |
 | `deep-check [--engine Unity]` | Run deeper Blender-based readiness checks when Blender is available. |
 | `package-asset [--engine Unity]` | Package the generated asset for engine import. |
+| `memory [list|show <asset_id>]` | List or inspect reusable asset memory records for variants and series assets. |
 | `run ...` | Run the guarded end-to-end workflow. |
 | `package` | Create `dist/tripo-game-agent-superpowers.zip` for sharing. |
 
@@ -249,6 +254,8 @@ Run `./bin/tripo-agent --help` for the exact argument forms.
 ```text
 workspace/
   input_inventory.json
+  preview_report.json
+  preview_report.md
   asset_brief.json
   production_plan.json
   preflight_report.md
@@ -259,6 +266,9 @@ workspace/
   readiness_report.json
   deep_readiness_report.json
   package_result.json
+  asset_memory/
+    index.json
+    <asset_id>.json
 
 outputs/<asset_id>/
   downloads/
@@ -290,6 +300,7 @@ Implemented real paths:
 - Engine import checklist.
 - Unity-style package zip.
 - Auto-open generated images/models for user confirmation.
+- Persistent asset memory for same-style variants and series reuse.
 
 Not fully automated yet:
 

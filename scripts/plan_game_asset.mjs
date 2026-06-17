@@ -1,6 +1,8 @@
 import path from 'node:path';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { ensureDirs, workspaceDir, writeJson, readJson, parseArgs, slugify } from './config.mjs';
+import { estimateCredits } from './pricing.mjs';
 
 const MODEL_VERSIONS = {
   P1: 'p1-20260311',
@@ -205,6 +207,15 @@ function planForBrief(brief, { inventory = null, tier = 'Standard', model = null
   const modelRoute = routeModel({ brief, inventory, tier, model });
   const exportRoute = buildExportRoute(brief);
   const rigRoute = buildRigRoute(brief, args);
+  const includeGeneratedMultiview = inventory?.view_strategy?.strategy === 'ask_user_for_views_or_generate_multiview' && args['generate-views-first'];
+  const creditEstimate = estimateCredits({
+    taskType: modelRoute.task_type,
+    modelFamily: modelRoute.model_family,
+    textureQuality: 'standard',
+    needsConversion: exportRoute.needs_conversion,
+    rigRequired: rigRoute.required && tier === 'Full',
+    includeGeneratedMultiview
+  });
   const preflightQuestions = [];
   if (brief.asset_type === 'character') {
     preflightQuestions.push(
@@ -254,15 +265,21 @@ function planForBrief(brief, { inventory = null, tier = 'Standard', model = null
       { name: 'Standard', description: 'optimized mesh + PBR + engine export' },
       { name: 'Full', description: 'Standard plus rig/readiness/package where supported' }
     ],
-    estimated_credits: brief.asset_type === 'character' ? '27-34' : '14-24',
+    estimated_credits: creditEstimate.total,
+    credit_estimate: creditEstimate,
     estimated_time: brief.asset_type === 'character' ? '8-12 min' : '4-8 min',
     risk_points: [
       'Tripo generation task may fail or rate-limit; retry with backoff.',
-      'Rig compatibility still requires engine-side validation.',
       'Downloaded result URLs can expire; download immediately after task success.',
-      'Single-image characters may fail on unseen back/side details; multi-view input is preferred.',
       'FBX export may require conversion if the Tripo task only returns GLB.',
       'Model route should be revisited if user provides more views or changes tier.',
+      ...(brief.asset_type === 'character' ? [
+        'Single-image characters may fail on unseen back/side details; multi-view input is preferred.',
+        'Rig compatibility still requires engine-side validation.'
+      ] : []),
+      ...(brief.asset_type === 'prop' || brief.asset_type === 'weapon' ? [
+        'Props and weapons often need explicit pivot, scale, and forward-axis checks before engine import.'
+      ] : []),
       ...(rigRoute.required ? ['Rig route requires pre-rig check before auto-rigging credits are spent.'] : [])
     ],
     fallback_policy: [
@@ -275,6 +292,8 @@ function planForBrief(brief, { inventory = null, tier = 'Standard', model = null
     preflight_questions: preflightQuestions
   };
 }
+
+export { inferBrief, routeModel, planForBrief };
 
 async function main() {
   ensureDirs();
@@ -314,7 +333,9 @@ async function main() {
   console.log('Next: ./bin/tripo-agent preflight --input assets/<reference>.png --engine ' + brief.engine);
 }
 
-main().catch((error) => {
-  console.error(`Planning failed: ${error.message}`);
-  process.exit(error.message.startsWith('Missing --') || error.message.startsWith('Missing value for --') ? 2 : 1);
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((error) => {
+    console.error(`Planning failed: ${error.message}`);
+    process.exit(error.message.startsWith('Missing --') || error.message.startsWith('Missing value for --') ? 2 : 1);
+  });
+}

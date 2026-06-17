@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import AdmZip from 'adm-zip';
 import { ensureDirs, workspaceDir, readJson, writeJson, parseArgs } from './config.mjs';
+import { buildMemoryRecord, saveMemoryRecord } from './memory_game_asset.mjs';
 
 function addDirectory(zip, sourceDir, zipRoot, filter = () => true) {
   if (!fs.existsSync(sourceDir)) return;
@@ -72,7 +73,14 @@ async function main() {
   const packageResult = { asset_id: production.asset_id, engine, package_path: packagePath, manifest };
   writeJson(path.join(outDir, 'package_result.json'), packageResult);
   writeJson(path.join(workspaceDir, 'package_result.json'), packageResult);
+  const brief = fs.existsSync(path.join(workspaceDir, 'asset_brief.json')) ? readJson(path.join(workspaceDir, 'asset_brief.json'), {}) : {};
+  const plan = fs.existsSync(path.join(workspaceDir, 'production_plan.json')) ? readJson(path.join(workspaceDir, 'production_plan.json'), {}) : {};
+  const memoryPath = saveMemoryRecord(buildMemoryRecord({ manifest, production, readiness, plan, brief, packagePath }));
+  packageResult.memory_path = memoryPath;
+  writeJson(path.join(outDir, 'package_result.json'), packageResult);
+  writeJson(path.join(workspaceDir, 'package_result.json'), packageResult);
   console.log(`Package created: ${packagePath}`);
+  console.log(`Memory saved: ${memoryPath}`);
 }
 
 main().catch((error) => {

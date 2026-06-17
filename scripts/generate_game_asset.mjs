@@ -179,6 +179,7 @@ async function main() {
     asset_id: assetId,
     output_dir: outDir,
     task_id: taskId,
+    consumed_credit: task.consumed_credit ?? task.consumed_credits ?? null,
     upload: uploadResult,
     downloads,
     task
@@ -188,6 +189,9 @@ async function main() {
 
   console.log(`Generation complete: ${outDir}`);
   console.log(`Downloaded files: ${downloads.length}`);
+  if (result.consumed_credit !== null) {
+    console.log(`Consumed credits: ${result.consumed_credit}`);
+  }
 
   if (shouldOpenArtifacts(args)) {
     const preview = downloads.find((item) => /\.(png|jpe?g|webp)$/i.test(item.path));

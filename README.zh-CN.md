@@ -2,9 +2,11 @@
 
 [English](./README.md)
 
-一个本地 Superpowers 风格的 Agent 插件，用来把游戏资产目标转成可执行的 Tripo 工作流。
+一个本地 Superpowers 风格的 Agent 插件，用来把游戏资产目标转成有保护措施、面向引擎可用性的 Tripo 工作流。
 
 项目借鉴 [`obra/superpowers`](https://github.com/obra/superpowers) 的组织方式：`CLAUDE.md` 是启动指令，`commands/tripo-agent.md` 是 slash command 入口，`using-tripo-game-agent` 是 bootstrap skill，多个 `game-asset-*` skill 承载稳定的工作流知识。
+
+产品重点是 Claude Code 或 Codex 里的 agent workflow：自然语言 intake、费用感知 preflight、可用性检查、降级决策和可复用 asset memory。CLI 是 agent 调用的确定性执行层。
 
 真实生成、格式转换、可选多视图生成、rig precheck 都会调用 Tripo API；如果缺少 `TRIPO_API_KEY`，流程会停在 setup 或 preflight 阶段。
 
@@ -71,7 +73,7 @@ skills/game-asset-*/SKILL.md
 /tripo-game-agent-superpowers:tripo-agent run --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" --input assets/mecha.png --engine Unity
 ```
 
-Agent 应按顺序执行意图理解、输入盘点、方案规划、preflight、用户确认、生产、可用性检查和打包。
+Agent 应按顺序执行意图理解、输入盘点、方案规划、preflight、用户确认、生产、可用性检查、打包和 memory 记录。
 
 如果你的 Claude Code 版本不支持 plugins，可以安装 legacy slash command：
 
@@ -103,7 +105,7 @@ Use the Tripo Game Agent workflow to plan a Unity-ready mech character from asse
 
 ## 使用 CLI
 
-当你需要确定性的命令、本地文件和明确检查点时，用这一部分。
+当你需要确定性的命令、本地文件和明确检查点时，用这一部分。它也是 agent plugin 调用的执行层。
 
 `./bin/tripo-agent` 是 portable shell launcher，会委托给 `bin/tripo-agent.sh`；不再依赖平台相关二进制文件。
 
@@ -115,6 +117,7 @@ Use the Tripo Game Agent workflow to plan a Unity-ready mech character from asse
 ```
 
 这会展示决策流程，但不会创建 Tripo 任务。
+它会写入 `workspace/preview_report.md` 和 `workspace/preview_report.json`，包含缺失输入、高价值补充输入、推荐路线、credit 估算和下一步。
 
 ### 完整保护流程
 
@@ -146,6 +149,7 @@ doctor
   -> inspect
   -> deep-check
   -> package
+  -> memory
 ```
 
 如果已经接受风险，需要自动执行：
@@ -227,7 +231,7 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
 | `doctor` | 检查本地运行环境。 |
 | `install` | 通过 marketplace manifest 安装 Claude Code plugin。 |
 | `install-legacy-command` | 只安装 legacy `/tripo-agent` slash command；它不会出现在 plugin 列表里。 |
-| `ask "<目标>"` | 不消耗额度地解析游戏资产目标。 |
+| `ask "<目标>"` | 生成不消耗额度的 agent preview：缺失输入、路线、credit 估算、风险和下一步。 |
 | `architecture` | 解释 Superpowers 风格的 skill 架构。 |
 | `inventory ...` | 检查单图、多视图、文本或已有模型输入。 |
 | `plan ...` | 生成 asset brief、模型路线、导出路线、rig 路线和制作方案。 |
@@ -239,6 +243,7 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
 | `inspect` | 运行基础本地文件检查。 |
 | `deep-check [--engine Unity]` | 如果有 Blender，运行更深的可用性检查。 |
 | `package-asset [--engine Unity]` | 打包生成资产，方便导入游戏引擎。 |
+| `memory [list|show <asset_id>]` | 查看可复用 asset memory，用于变体和系列资产。 |
 | `run ...` | 运行带保护的端到端流程。 |
 | `package` | 创建 `dist/tripo-game-agent-superpowers.zip` 分享包。 |
 
@@ -249,6 +254,8 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
 ```text
 workspace/
   input_inventory.json
+  preview_report.json
+  preview_report.md
   asset_brief.json
   production_plan.json
   preflight_report.md
@@ -259,6 +266,9 @@ workspace/
   readiness_report.json
   deep_readiness_report.json
   package_result.json
+  asset_memory/
+    index.json
+    <asset_id>.json
 
 outputs/<asset_id>/
   downloads/
@@ -290,6 +300,7 @@ outputs/<asset_id>/
 - 引擎导入 checklist。
 - Unity 风格 package zip。
 - 自动打开生成的图片或模型，方便用户确认。
+- 持久化 asset memory，支持同风格变体和系列复用。
 
 尚未完全自动化：
 

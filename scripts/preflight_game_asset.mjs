@@ -166,6 +166,8 @@ function costAssessment({ brief, plan, image, engine }) {
     recommendation,
     estimated_credits: plan.estimated_credits || 'unknown',
     estimated_time: plan.estimated_time || 'unknown',
+    credit_items: plan.credit_estimate?.items || [],
+    pricing_source: plan.credit_estimate?.source || null,
     credit_risks: creditRisk,
     should_confirm_before_generation: true
   };
@@ -192,6 +194,12 @@ function renderMarkdown(report) {
     ...(report.improvements.length
       ? report.improvements.map((item) => `- [${item.priority}] ${item.item}: ${item.why} (${item.suggested_input})`)
       : ['- None']),
+    '',
+    '## Credit Breakdown',
+    ...(report.cost.credit_items?.length
+      ? report.cost.credit_items.map((item) => `- ${item.label}: ${item.credits}`)
+      : ['- Not available']),
+    report.cost.pricing_source ? `- Source: ${report.cost.pricing_source}` : '- Source: not available',
     '',
     '## Credit Risks',
     ...(report.cost.credit_risks.length
