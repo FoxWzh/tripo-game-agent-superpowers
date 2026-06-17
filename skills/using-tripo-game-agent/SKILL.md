@@ -89,4 +89,4 @@ If asked why preflight exists:
 
 If asked why view strategy exists:
 
-> Model routing depends on what material the user already has. The agent should ask for real views before generating candidate views, and should not choose image-to-model or multiview-to-model until the input inventory is known.
+> Model routing depends on what material the user already has. The agent should ask for real views before generating optional multiview images, and should not choose image-to-model or multiview-to-model until the input inventory is known.

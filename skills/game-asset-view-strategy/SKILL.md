@@ -1,6 +1,6 @@
 ---
 name: game-asset-view-strategy
-description: Use after game-asset-intake to inventory user inputs, decide whether to use single image, user multiview, generated candidate multiview, text-to-model, or existing model routes before model routing and planning.
+description: Use after game-asset-intake to inventory user inputs, decide whether to use single image, user multiview, generated multiview, text-to-model, or existing model routes before model routing and planning.
 ---
 
 # Game Asset View Strategy
@@ -10,10 +10,10 @@ Use this skill after intent intake and before production planning.
 The product rule:
 
 ```text
-User real multiview > generated candidate multiview > single-image 3D with explicit risk
+User real multiview > generated multiview > single-image 3D with explicit risk
 ```
 
-Do not generate candidate multiview images automatically. Ask whether the user already has back/side views first.
+Do not generate multiview images automatically. Ask whether the user already has back/side views first.
 
 ## Required Command
 
@@ -52,7 +52,7 @@ workspace/input_inventory.json
 - If user has `front` plus at least one of `back/left/right`, route to `multiview_to_model`.
 - If user only has one image, ask:
   - Do you have more real angle references?
-  - If not, do you want to spend a smaller amount first to generate candidate multiview images?
+  - If not, do you want to spend a smaller amount first to generate multiview images?
   - Or proceed single-image with back/side/rig risks documented?
 - If user has only text, offer text-to-model draft or concept/multiview preparation.
 - If user has an existing 3D model, route to memory/revision/conversion/readiness instead of new image-to-model.

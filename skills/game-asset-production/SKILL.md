@@ -63,7 +63,7 @@ If the Production Plan route is `multiview_to_model`, pass real or generated vie
   --right assets/right.png
 ```
 
-If the user chooses candidate multiview generation first:
+If the user chooses generated multiview first:
 
 ```bash
 ./bin/tripo-agent synthesize-views --input assets/front.png
@@ -137,7 +137,7 @@ Rules:
 - Only character/creature assets need rig by default.
 - Unity character: Unity humanoid mapping.
 - Unreal character: UE Manny compatibility if requested.
-- If rig fails, continue to readiness with a no-rig fallback candidate.
+- If rig fails, continue to readiness with a no-rig fallback asset.
 
 ### Engine Prep
 

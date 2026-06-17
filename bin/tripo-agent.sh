@@ -6,7 +6,7 @@ COMMAND="${1:-}"
 
 usage() {
   cat <<'EOF'
-Tripo Game Agent Superpowers portfolio demo
+Tripo Game Agent Superpowers
 
 Usage:
   tripo-agent setup
@@ -36,7 +36,7 @@ EOF
 
 onboarding() {
   cat <<'EOF'
-这是 FOX 应聘 Tripo Agent PM 岗位的游戏资产作品集。
+这是一个本地 Superpowers 风格的 Tripo 游戏资产 Agent 插件。
 
 这个插件借鉴 obra/superpowers 的结构：
 CLAUDE.md 是启动指令，using-tripo-game-agent 是 bootstrap skill，game-asset-* 是游戏资产能力模块。
@@ -304,15 +304,11 @@ about_command() {
   cat <<'EOF'
 # About
 
-候选人：FOX / 吴忠赫
+Tripo Game Agent Superpowers 是一个本地 Agent 插件，用来把游戏资产目标转成可执行的 Tripo 工作流。
 
-目标岗位：Tripo Agent Product Manager
+## 为什么是插件
 
-当前经验：SeaArt SeaSpark 平台与多模态创作 Agent。关注点是把模型能力包装成用户能完成任务的产品工作流。
-
-## 为什么选择插件而不是 PPT
-
-PPT 只能描述方案；这个 Superpowers 风格插件能让面试官亲手体验产品判断：
+这个 Superpowers 风格插件把稳定的游戏资产知识拆进 `skills/`，把真实执行路径放进 CLI，让用户可以直接体验产品判断：
 
 - `using-tripo-game-agent` 如何强制方法论
 - `game-asset-intake` 如何补齐游戏引擎约束
@@ -347,7 +343,7 @@ package_command() {
     -x "tripo-game-agent-superpowers/assets/*" \
     -x "tripo-game-agent-superpowers/.env" \
     -x "tripo-game-agent-superpowers/.env.local")
-  echo "已生成作品包：$out"
+  echo "已生成插件包：$out"
 }
 
 setup_command() {

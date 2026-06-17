@@ -1,29 +1,31 @@
 # Tripo Game Agent Superpowers
 
-FOX 应聘 Tripo Agent Product Manager 的游戏资产方向面试作品。
+[中文说明](./README.zh-CN.md)
 
-这个项目借鉴 [`obra/superpowers`](https://github.com/obra/superpowers) 的思想：`CLAUDE.md` 是启动指令，`using-tripo-game-agent` 是 bootstrap skill，多个 `game-asset-*` skill 承载稳定的业务知识、工作流和输出契约。
+A local Superpowers-style agent plugin for turning game-asset goals into executable Tripo workflows.
 
-它不是一个 mock demo。真实生成、格式转换、候选多视图、rig precheck 都走 Tripo API；没有 `TRIPO_API_KEY` 时会停在 setup / preflight 阶段。
+The project follows the pattern popularized by [`obra/superpowers`](https://github.com/obra/superpowers): `CLAUDE.md` is the boot instruction, `using-tripo-game-agent` is the bootstrap skill, and the `game-asset-*` skills encode stable workflow knowledge and output contracts.
 
-## What This Demonstrates
+This is not a mock-only project. Real generation, format conversion, optional multiview generation, and rig precheck use Tripo APIs. If `TRIPO_API_KEY` is missing, the workflow stops at setup or preflight.
 
-游戏用户通常只会描述目标：
+## What It Demonstrates
 
-```text
-我要一个 Unity 里用的机甲角色，quad mesh，15k 面，带骨骼。
-```
-
-他们不会自然说出：
+Game users usually describe outcomes:
 
 ```text
-先盘点素材 -> 判断单图/多视图 -> 选 P1/H3 -> 生成 3D
--> 转 FBX -> rig precheck -> readiness -> package
+I need a Unity-ready mech character, quad mesh, 15k faces, with rigging.
 ```
 
-这个插件展示的就是 Agent 产品层如何把“目标”翻译成“可执行游戏资产工作流”。
+They do not naturally describe the production pipeline:
 
-当前流程：
+```text
+inventory inputs -> choose single-image or multiview route -> choose P1/H3
+-> generate 3D -> convert to FBX -> rig precheck -> readiness -> package
+```
+
+This plugin shows how an agent product layer can translate a user goal into a guarded, executable game-asset workflow.
+
+Current flow:
 
 ```text
 Intent Intake
@@ -54,11 +56,11 @@ cd tripo-game-agent-superpowers
 Run the no-credit local walkthrough first:
 
 ```bash
-./bin/tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼"
+./bin/tripo-agent ask "Unity-ready mech character, quad mesh, 15k faces, rigged"
 ./bin/tripo-agent architecture
 ```
 
-This shows the Agent decision flow without creating a Tripo task.
+This shows the decision flow without creating a Tripo task.
 
 ## Setup For Real API Calls
 
@@ -85,11 +87,11 @@ Put a reference image under `assets/`, for example:
 assets/mecha.png
 ```
 
-Run the full guarded workflow:
+Run the guarded workflow:
 
 ```bash
 ./bin/tripo-agent run \
-  --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" \
+  --prompt "Unity-ready mech character, quad mesh, 15k faces, rigged" \
   --input assets/mecha.png \
   --engine Unity
 ```
@@ -109,11 +111,11 @@ doctor
   -> package
 ```
 
-If you are recording and already accept the risk:
+For automated runs where you already accept the risk:
 
 ```bash
 ./bin/tripo-agent run \
-  --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" \
+  --prompt "Unity-ready mech character, quad mesh, 15k faces, rigged" \
   --input assets/mecha.png \
   --engine Unity \
   --yes
@@ -135,7 +137,7 @@ Use this when you want to inspect every decision:
 ./bin/tripo-agent inventory --input assets/mecha.png
 
 ./bin/tripo-agent plan \
-  --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" \
+  --prompt "Unity-ready mech character, quad mesh, 15k faces, rigged" \
   --engine Unity \
   --poly-budget 15000 \
   --rig-preset unity-humanoid
@@ -154,7 +156,7 @@ Use this when you want to inspect every decision:
 ./bin/tripo-agent package-asset --engine Unity
 ```
 
-Important: `rig` defaults to precheck only. To spend rigging credits and apply auto-rig:
+`rig` defaults to precheck only. To spend rigging credits and apply auto-rig:
 
 ```bash
 ./bin/tripo-agent rig --preset unity-humanoid --apply
@@ -172,7 +174,7 @@ If the user already has real multiview images, prefer those:
   --right assets/mecha_right.png
 
 ./bin/tripo-agent plan \
-  --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" \
+  --prompt "Unity-ready mech character, quad mesh, 15k faces, rigged" \
   --engine Unity
 
 ./bin/tripo-agent generate \
@@ -182,13 +184,13 @@ If the user already has real multiview images, prefer those:
   --right assets/mecha_right.png
 ```
 
-If the user only has one image, ask before generating candidate views:
+If the user only has one image, ask before generating optional multiview images:
 
 ```bash
 ./bin/tripo-agent synthesize-views --input assets/mecha_front.png
 ```
 
-The generated views are opened for confirmation. Do not proceed to 3D until the user accepts them.
+Generated views are opened for confirmation. Do not proceed to 3D until the user accepts them.
 
 ## Install Into Claude Code
 
@@ -201,7 +203,7 @@ Install the slash command:
 Then open Claude Code in this repository and run:
 
 ```text
-/tripo-agent ask "Unreal 里用的 boss 角色，需要 UE Manny 兼容骨骼"
+/tripo-agent ask "Unreal boss character, UE Manny compatible rig"
 /tripo-agent architecture
 /tripo-agent about
 ```
@@ -227,7 +229,7 @@ skills/
 ```bash
 ./bin/tripo-agent setup
 ./bin/tripo-agent doctor
-./bin/tripo-agent ask "<游戏资产需求>"
+./bin/tripo-agent ask "<game asset goal>"
 ./bin/tripo-agent architecture
 ./bin/tripo-agent inventory ...
 ./bin/tripo-agent plan ...
@@ -311,11 +313,11 @@ game-asset-intake
 
 Implemented real paths:
 
-- API key / dependency setup.
+- API key and dependency setup.
 - Input inventory and view strategy.
 - P1 / H3 / H2 / Turbo / v1.4 model routing.
 - Image-to-model and multiview-to-model payload paths.
-- Candidate multiview image generation.
+- Optional multiview image generation.
 - Preflight cost and missing-input gate.
 - Tripo generation polling and downloads.
 - Tripo conversion API for FBX/OBJ/STL/GLTF-style export.
@@ -326,7 +328,7 @@ Implemented real paths:
 - Unity-style package zip.
 - Auto-open generated images/models for user confirmation.
 
-Still not fully automated:
+Not fully automated yet:
 
 - Unity Humanoid / UE Manny retarget validation inside the engine.
 - Full Unity/Unreal import preset generation.
@@ -335,15 +337,15 @@ Still not fully automated:
 - Modular fit to an existing character.
 - Localized mesh edits without full regeneration.
 
-## Interview Walkthrough
+## Walkthrough
 
 Five-minute path:
 
 ```bash
-./bin/tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼"
+./bin/tripo-agent ask "Unity-ready mech character, quad mesh, 15k faces, rigged"
 ./bin/tripo-agent architecture
 ./bin/tripo-agent setup
-./bin/tripo-agent run --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" --input assets/mecha.png --engine Unity
+./bin/tripo-agent run --prompt "Unity-ready mech character, quad mesh, 15k faces, rigged" --input assets/mecha.png --engine Unity
 ```
 
 Then open:

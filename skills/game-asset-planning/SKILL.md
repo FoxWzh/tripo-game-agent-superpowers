@@ -50,7 +50,7 @@ Choose model only after input inventory:
 Choose task type from input:
 
 - User has real multiview: `multiview_to_model`.
-- User generated candidate multiview and accepted it: `multiview_to_model`.
+- User generated multiview and accepted it: `multiview_to_model`.
 - User has one image: `image_to_model`, unless user chooses to synthesize views first.
 - User has only text: `text_to_model` or generate concept/multiview first.
 - User has existing model: route to conversion/readiness/revision/memory, not new generation.
@@ -191,7 +191,7 @@ LoadBaseAsset
 - Weapon Standard: 14-20 credits / 4-8 min.
 - Modular attachment: 24-45 credits / 8-18 min.
 
-These are demo estimates, not Tripo billing facts.
+These are planning estimates, not Tripo billing facts.
 
 ## Risk Points
 

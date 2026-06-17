@@ -78,8 +78,8 @@ intent -> input inventory -> view strategy -> model route -> production plan
 
 Rules:
 
-- User real multiview beats generated candidate multiview.
-- Generated candidate multiview beats single-image 3D only after user confirmation.
+- User real multiview beats generated multiview.
+- Generated multiview beats single-image 3D only after user confirmation.
 - Single-image 3D is allowed, but back/side/rig risks must be explicit.
 - Existing models route to conversion, readiness, memory, or revision rather than new generation.
 
