@@ -17,6 +17,24 @@ async function commandOk(command, args = ['--version']) {
   }
 }
 
+async function blenderOk() {
+  const override = process.env.BLENDER_BIN;
+  if (override) return commandOk(override, ['--version']);
+
+  const pathResult = await commandOk('blender', ['--version']);
+  if (pathResult.ok) return { ...pathResult, command: 'blender' };
+
+  if (process.platform === 'darwin') {
+    const appBinary = '/Applications/Blender.app/Contents/MacOS/Blender';
+    if (fs.existsSync(appBinary)) {
+      const appResult = await commandOk(appBinary, ['--version']);
+      return { ...appResult, command: appBinary };
+    }
+  }
+
+  return pathResult;
+}
+
 async function confirm(message) {
   const rl = readline.createInterface({ input, output });
   const answer = (await rl.question(`${message} [y/N] `)).trim().toLowerCase();
@@ -45,7 +63,7 @@ export async function runDoctor({ install = false } = {}) {
   checks.push({ name: 'npm', ...(await commandOk('npm', ['--version'])) });
   checks.push({ name: 'curl', ...(await commandOk('curl', ['--version'])) });
   checks.push({ name: 'zip', ...(await commandOk('zip', ['--version'])) });
-  checks.push({ name: 'blender', ...(await commandOk('blender', ['--version'])) });
+  checks.push({ name: 'blender', ...(await blenderOk()) });
 
   const hasNodeModules = fs.existsSync(`${rootDir}/node_modules`);
   checks.push({ name: 'node_modules', ok: hasNodeModules, text: hasNodeModules ? 'installed' : 'missing' });
@@ -60,7 +78,8 @@ export async function runDoctor({ install = false } = {}) {
   }
 
   if (!hasNodeModules) {
-    const shouldInstall = install || await confirm('\nNode dependencies are missing. Install with npm install?');
+    const assumeYes = process.env.TRIPO_AGENT_YES === '1' || process.env.CI === 'true';
+    const shouldInstall = install || assumeYes || await confirm('\nNode dependencies are missing. Install with npm install?');
     if (shouldInstall) {
       await run('npm', ['install'], { cwd: rootDir });
     }
@@ -79,7 +98,7 @@ export async function runDoctor({ install = false } = {}) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  runDoctor({ install: process.argv.includes('--install') }).catch((error) => {
+  runDoctor({ install: process.argv.includes('--install') || process.argv.includes('--yes') || process.argv.includes('-y') }).catch((error) => {
     console.error(`Doctor failed: ${error.message}`);
     process.exit(1);
   });

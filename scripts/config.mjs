@@ -59,8 +59,9 @@ export function slugify(value) {
     .slice(0, 64) || 'asset';
 }
 
-export function parseArgs(argv) {
+export function parseArgs(argv, { requireValuesFor = [] } = {}) {
   const result = { _: [] };
+  const requireValues = new Set(requireValuesFor);
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (!arg.startsWith('--')) {
@@ -70,6 +71,9 @@ export function parseArgs(argv) {
     const key = arg.slice(2);
     const next = argv[i + 1];
     if (!next || next.startsWith('--')) {
+      if (requireValues.has(key)) {
+        throw new Error(`Missing value for --${key}.`);
+      }
       result[key] = true;
     } else {
       result[key] = next;

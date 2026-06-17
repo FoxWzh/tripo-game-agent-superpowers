@@ -173,12 +173,15 @@ ask_command() {
     time="不建议估算"
   fi
 
-  cat <<EOF
+  local tags_text="${tags[*]:-"intent=unclear"}"
+  cat <<'EOF'
 # /tripo-agent ask
 
 输入：
 
-> $query
+EOF
+  printf '> %s\n\n' "$query"
+  cat <<'EOF'
 
 ## using-tripo-game-agent
 
@@ -197,10 +200,12 @@ ask_command() {
 
 ## game-asset-intake / Asset Brief
 
-- 用户画像：$persona
-- 推荐工作流：$workflow
-- 置信度：$confidence
-- 抽取 tags：${tags[*]:-"intent=unclear"}
+EOF
+  printf -- '- 用户画像：%s\n' "$persona"
+  printf -- '- 推荐工作流：%s\n' "$workflow"
+  printf -- '- 置信度：%s\n' "$confidence"
+  printf -- '- 抽取 tags：%s\n' "$tags_text"
+  cat <<'EOF'
 
 ## game-asset-planning / Production Plan
 
@@ -438,8 +443,6 @@ run_command() {
     fi
   done
 
-  (cd "$ROOT" && node scripts/doctor.mjs)
-
   local input_args=()
   local engine_args=()
   local convert_args=()
@@ -448,9 +451,18 @@ run_command() {
   local inventory_args=()
   local plan_args=()
   local i=0
+  require_value() {
+    local flag="$1"
+    local value="${2:-}"
+    if [[ -z "$value" || "$value" == --* ]]; then
+      echo "Missing value for $flag" >&2
+      exit 2
+    fi
+  }
   while [[ $i -lt ${#args[@]} ]]; do
     case "${args[$i]}" in
       --input|--input-url|--front|--back|--left|--right|--base-asset)
+        require_value "${args[$i]}" "${args[$((i+1))]:-}"
         inventory_args+=("${args[$i]}" "${args[$((i+1))]}")
         preflight_args+=("${args[$i]}" "${args[$((i+1))]}")
         if [[ "${args[$i]}" == "--input" || "${args[$i]}" == "--input-url" ]]; then
@@ -462,11 +474,13 @@ run_command() {
         i=$((i+2))
         ;;
       --scale-note|--pivot|--rig-preset|--poly-budget|--tier|--model|--model-family|--asset-type)
+        require_value "${args[$i]}" "${args[$((i+1))]:-}"
         preflight_args+=("${args[$i]}" "${args[$((i+1))]}")
         plan_args+=("${args[$i]}" "${args[$((i+1))]}")
         i=$((i+2))
         ;;
       --prompt)
+        require_value "${args[$i]}" "${args[$((i+1))]:-}"
         inventory_args+=("${args[$i]}" "${args[$((i+1))]}")
         plan_args+=("${args[$i]}" "${args[$((i+1))]}")
         i=$((i+2))
@@ -475,17 +489,20 @@ run_command() {
         i=$((i+1))
         ;;
       --engine)
+        require_value "${args[$i]}" "${args[$((i+1))]:-}"
         engine_args+=("--engine" "${args[$((i+1))]}")
         preflight_args+=("--engine" "${args[$((i+1))]}")
         plan_args+=("--engine" "${args[$((i+1))]}")
         i=$((i+2))
         ;;
       --format)
+        require_value "${args[$i]}" "${args[$((i+1))]:-}"
         conversion_format="${args[$((i+1))]}"
         convert_args+=("${args[$i]}" "${args[$((i+1))]}")
         i=$((i+2))
         ;;
       --texture-format|--fbx-preset)
+        require_value "${args[$i]}" "${args[$((i+1))]:-}"
         convert_args+=("${args[$i]}" "${args[$((i+1))]}")
         i=$((i+2))
         ;;
@@ -500,7 +517,9 @@ run_command() {
         i=$((i+1))
       ;;
   esac
-  done
+	  done
+
+  (cd "$ROOT" && node scripts/doctor.mjs)
 
   set +e
   (cd "$ROOT" && node scripts/inventory_game_asset.mjs "${inventory_args[@]}")

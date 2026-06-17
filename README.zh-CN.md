@@ -16,7 +16,11 @@ cd tripo-game-agent-superpowers
 ./bin/tripo-agent setup
 ```
 
-`setup` 会在缺少 `TRIPO_API_KEY` 时要求输入，检查本地依赖，并在安装 npm 依赖前请求确认。
+`setup` 会在缺少 `TRIPO_API_KEY` 时要求输入，检查本地依赖，并安装缺失的 npm 依赖。自动化场景可以通过环境变量传入 key，并自动确认依赖安装：
+
+```bash
+TRIPO_API_KEY=tsk_... TRIPO_AGENT_YES=1 ./bin/tripo-agent setup
+```
 
 ## 作为 Agent 插件使用
 
@@ -100,6 +104,8 @@ Use the Tripo Game Agent workflow to plan a Unity-ready mech character from asse
 ## 使用 CLI
 
 当你需要确定性的命令、本地文件和明确检查点时，用这一部分。
+
+`./bin/tripo-agent` 是 portable shell launcher，会委托给 `bin/tripo-agent.sh`；不再依赖平台相关二进制文件。
 
 ### 不消耗额度的预览
 

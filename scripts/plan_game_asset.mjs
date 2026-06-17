@@ -278,8 +278,10 @@ function planForBrief(brief, { inventory = null, tier = 'Standard', model = null
 
 async function main() {
   ensureDirs();
-  const args = parseArgs(process.argv.slice(2));
-  if (!args.prompt) {
+  const args = parseArgs(process.argv.slice(2), {
+    requireValuesFor: ['prompt', 'engine', 'poly-budget', 'rig-preset', 'tier', 'model', 'model-family', 'asset-type', 'inventory', 'brief', 'plan']
+  });
+  if (!args.prompt || args.prompt === true || !String(args.prompt).trim()) {
     throw new Error('Missing --prompt.');
   }
   const brief = inferBrief({
@@ -296,12 +298,23 @@ async function main() {
     model: args.model || args['model-family'],
     args
   });
-  writeJson(args.brief || path.join(workspaceDir, 'asset_brief.json'), brief);
-  writeJson(args.plan || path.join(workspaceDir, 'production_plan.json'), plan);
-  console.log(`Wrote Asset Brief and Production Plan for ${brief.asset_id}`);
+  const briefPath = args.brief || path.join(workspaceDir, 'asset_brief.json');
+  const planPath = args.plan || path.join(workspaceDir, 'production_plan.json');
+  writeJson(briefPath, brief);
+  writeJson(planPath, plan);
+
+  console.log(`Asset ID: ${brief.asset_id}`);
+  console.log(`Asset type: ${brief.asset_type}`);
+  console.log(`Engine: ${brief.engine}`);
+  console.log(`Model route: ${plan.model_route.model_family} / ${plan.model_route.task_type}`);
+  console.log(`Export route: ${plan.export_route.preferred_format} (fallback ${plan.export_route.fallback_format})`);
+  console.log(`Estimated credits/time: ${plan.estimated_credits} credits / ${plan.estimated_time}`);
+  console.log(`Wrote: ${briefPath}`);
+  console.log(`Wrote: ${planPath}`);
+  console.log('Next: ./bin/tripo-agent preflight --input assets/<reference>.png --engine ' + brief.engine);
 }
 
 main().catch((error) => {
   console.error(`Planning failed: ${error.message}`);
-  process.exit(1);
+  process.exit(error.message.startsWith('Missing --') || error.message.startsWith('Missing value for --') ? 2 : 1);
 });

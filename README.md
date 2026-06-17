@@ -16,7 +16,11 @@ cd tripo-game-agent-superpowers
 ./bin/tripo-agent setup
 ```
 
-`setup` asks for `TRIPO_API_KEY` when missing, checks local dependencies, and asks before installing npm packages.
+`setup` asks for `TRIPO_API_KEY` when missing, checks local dependencies, and installs missing npm packages. For automation, pass the key through the environment and auto-accept dependency installation:
+
+```bash
+TRIPO_API_KEY=tsk_... TRIPO_AGENT_YES=1 ./bin/tripo-agent setup
+```
 
 ## Use As An Agent Plugin
 
@@ -100,6 +104,8 @@ For real API calls, run `./bin/tripo-agent setup` first so the local `.env.local
 ## Use The CLI
 
 Use this path when you want deterministic commands, local files, and explicit checkpoints.
+
+`./bin/tripo-agent` is a portable shell launcher that delegates to `bin/tripo-agent.sh`; it does not require a platform-specific binary.
 
 ### No-Credit Preview
 

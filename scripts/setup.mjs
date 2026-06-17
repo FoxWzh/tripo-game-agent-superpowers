@@ -8,6 +8,10 @@ ensureDirs();
 const existingKey = getApiKey({ required: false });
 if (existingKey) {
   console.log('TRIPO_API_KEY detected.');
+} else if (!input.isTTY) {
+  console.error('TRIPO_API_KEY is missing and setup is running non-interactively.');
+  console.error('Run `TRIPO_API_KEY=... ./bin/tripo-agent setup` or create `.env.local` first.');
+  process.exit(1);
 } else {
   const rl = readline.createInterface({ input, output });
   const key = (await rl.question('请输入 Tripo API Key: ')).trim();
