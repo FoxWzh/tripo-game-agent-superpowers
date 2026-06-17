@@ -4,90 +4,101 @@
 
 一个本地 Superpowers 风格的 Agent 插件，用来把游戏资产目标转成可执行的 Tripo 工作流。
 
-项目借鉴 [`obra/superpowers`](https://github.com/obra/superpowers) 的组织方式：`CLAUDE.md` 是启动指令，`using-tripo-game-agent` 是 bootstrap skill，多个 `game-asset-*` skill 承载稳定的流程知识和输出契约。
+项目借鉴 [`obra/superpowers`](https://github.com/obra/superpowers) 的组织方式：`CLAUDE.md` 是启动指令，`commands/tripo-agent.md` 是 slash command 入口，`using-tripo-game-agent` 是 bootstrap skill，多个 `game-asset-*` skill 承载稳定的工作流知识。
 
-这不是只做 mock 的演示。真实生成、格式转换、可选多视图生成、rig precheck 都会调用 Tripo API；如果缺少 `TRIPO_API_KEY`，流程会停在 setup 或 preflight 阶段。
-
-## 项目展示什么
-
-游戏用户通常只会描述目标：
-
-```text
-我要一个 Unity 里用的机甲角色，quad mesh，15k 面，带骨骼。
-```
-
-他们通常不会自然描述完整生产步骤：
-
-```text
-盘点输入 -> 判断单图/多视图路线 -> 选择 P1/H3
--> 生成 3D -> 转 FBX -> rig precheck -> readiness -> package
-```
-
-这个插件展示的是 Agent 产品层如何把“用户目标”翻译成“有保护措施的可执行游戏资产工作流”。
-
-当前流程：
-
-```text
-Intent Intake
-  -> Input Inventory / View Strategy
-  -> Model Routing
-  -> Export Route
-  -> Rig Route
-  -> Production Plan
-  -> Preflight / Human Confirmation
-  -> Tripo Generation
-  -> Conversion
-  -> Rig Precheck / Auto Rig if confirmed
-  -> Basic Readiness
-  -> Deep Readiness
-  -> Package
-  -> Memory
-```
+真实生成、格式转换、可选多视图生成、rig precheck 都会调用 Tripo API；如果缺少 `TRIPO_API_KEY`，流程会停在 setup 或 preflight 阶段。
 
 ## 快速开始
-
-Clone:
 
 ```bash
 git clone https://github.com/FoxWzh/tripo-game-agent-superpowers.git
 cd tripo-game-agent-superpowers
+./bin/tripo-agent setup
 ```
 
-先运行不消耗额度的本地 walkthrough：
+`setup` 会在缺少 `TRIPO_API_KEY` 时要求输入，检查本地依赖，并在安装 npm 依赖前请求确认。
+
+## 作为 Agent 插件使用
+
+当你希望 Claude Code 或 Codex 通过 skills 引导工作流，而不是自己逐条调用 CLI 命令时，用这一部分。
+
+### Claude Code
+
+安装 slash command：
+
+```bash
+./bin/tripo-agent install
+```
+
+然后从这个仓库根目录打开 Claude Code，运行：
+
+```text
+/tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼"
+/tripo-agent architecture
+/tripo-agent about
+```
+
+slash command 会委托给本地 Superpowers 风格文件：
+
+```text
+CLAUDE.md
+commands/tripo-agent.md
+skills/using-tripo-game-agent/SKILL.md
+skills/game-asset-*/SKILL.md
+```
+
+如果要真实生成，把参考文件放到 `assets/`，然后让 agent 运行带保护的工作流：
+
+```text
+/tripo-agent run --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" --input assets/mecha.png --engine Unity
+```
+
+Agent 应按顺序执行意图理解、输入盘点、方案规划、preflight、用户确认、生产、可用性检查和打包。
+
+### Codex
+
+仓库包含 Codex plugin manifest：
+
+```text
+.codex-plugin/plugin.json
+```
+
+把这个仓库目录作为本地 Codex plugin 导入。插件会指向：
+
+```text
+skills/
+```
+
+导入后可以这样让 Codex 使用 Tripo 游戏资产工作流：
+
+```text
+Use the Tripo Game Agent workflow to plan a Unity-ready mech character from assets/mecha.png.
+```
+
+如果要真实调用 API，先运行 `./bin/tripo-agent setup`，确保本地 `.env.local` 和依赖已准备好。
+
+## 使用 CLI
+
+当你需要确定性的命令、本地文件和明确检查点时，用这一部分。
+
+### 不消耗额度的预览
 
 ```bash
 ./bin/tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼"
 ./bin/tripo-agent architecture
 ```
 
-这会展示 Agent 的决策流程，但不会创建 Tripo 任务。
+这会展示决策流程，但不会创建 Tripo 任务。
 
-## 配置真实 API 调用
+### 完整保护流程
 
-运行：
-
-```bash
-./bin/tripo-agent setup
-```
-
-`setup` 会：
-
-- 在缺少 `TRIPO_API_KEY` 时要求输入，并保存到 `.env.local`。
-- 检查 Node / npm / curl / zip。
-- 检查 Blender。Blender 是可选项，但推荐安装，用于 deep readiness。
-- 如果依赖缺失，会先询问，再运行 `npm install`。
-
-`.env.local`、`assets/`、`workspace/*.json`、`outputs/` 都已加入 gitignore。
-
-## 本地体验
-
-把参考图放到 `assets/`，例如：
+把参考图放到 `assets/`：
 
 ```text
 assets/mecha.png
 ```
 
-运行带保护的完整流程：
+运行：
 
 ```bash
 ./bin/tripo-agent run \
@@ -111,7 +122,7 @@ doctor
   -> package
 ```
 
-如果已经确认风险、需要录制或自动执行：
+如果已经接受风险，需要自动执行：
 
 ```bash
 ./bin/tripo-agent run \
@@ -129,9 +140,7 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
 ./bin/tripo-agent run ... --no-open
 ```
 
-## 分步模式
-
-当你想检查每一步决策时，可以分步运行：
+### 分步运行
 
 ```bash
 ./bin/tripo-agent inventory --input assets/mecha.png
@@ -149,7 +158,7 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
   --rig-preset unity-humanoid
 
 ./bin/tripo-agent generate --input assets/mecha.png
-./bin/tripo-agent convert
+./bin/tripo-agent convert --format FBX
 ./bin/tripo-agent rig --preset unity-humanoid
 ./bin/tripo-agent inspect
 ./bin/tripo-agent deep-check --engine Unity
@@ -162,29 +171,21 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
 ./bin/tripo-agent rig --preset unity-humanoid --apply
 ```
 
-## 多视图流程
+### 多视图运行
 
-如果用户已经有真实多视图图片，优先使用真实多视图：
+如果已经有真实多视图图片，优先使用真实多视图：
 
 ```bash
-./bin/tripo-agent inventory \
-  --front assets/mecha_front.png \
-  --back assets/mecha_back.png \
-  --left assets/mecha_left.png \
-  --right assets/mecha_right.png
-
-./bin/tripo-agent plan \
+./bin/tripo-agent run \
   --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" \
-  --engine Unity
-
-./bin/tripo-agent generate \
   --front assets/mecha_front.png \
   --back assets/mecha_back.png \
   --left assets/mecha_left.png \
-  --right assets/mecha_right.png
+  --right assets/mecha_right.png \
+  --engine Unity
 ```
 
-如果用户只有单张图，需要先询问是否生成可选多视图：
+如果只有单张图，必须在用户确认后再生成可选多视图：
 
 ```bash
 ./bin/tripo-agent synthesize-views --input assets/mecha_front.png
@@ -192,62 +193,31 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
 
 生成后的多视图会自动打开供用户确认。用户接受前，不应继续进入 3D 生成。
 
-## 安装到 Claude Code
-
-安装 slash command：
-
-```bash
-./bin/tripo-agent install
-```
-
-然后在这个仓库中打开 Claude Code，运行：
-
-```text
-/tripo-agent ask "Unreal 里用的 boss 角色，需要 UE Manny 兼容骨骼"
-/tripo-agent architecture
-/tripo-agent about
-```
-
-slash command 会委托给 `CLAUDE.md` 和 `skills/` 中定义的同一套 Superpowers 风格工作流。
-
-## 安装到 Codex
-
-仓库包含 Codex plugin manifest：
-
-```text
-.codex-plugin/plugin.json
-```
-
-把该仓库目录作为本地 Codex plugin 导入即可。核心 skills 位于：
-
-```text
-skills/
-```
-
 ## 命令参考
 
-```bash
-./bin/tripo-agent setup
-./bin/tripo-agent doctor
-./bin/tripo-agent ask "<游戏资产目标>"
-./bin/tripo-agent architecture
-./bin/tripo-agent inventory ...
-./bin/tripo-agent plan ...
-./bin/tripo-agent preflight ...
-./bin/tripo-agent synthesize-views ...
-./bin/tripo-agent generate ...
-./bin/tripo-agent convert [--format FBX]
-./bin/tripo-agent rig [--preset unity-humanoid] [--apply]
-./bin/tripo-agent inspect
-./bin/tripo-agent deep-check [--engine Unity]
-./bin/tripo-agent package-asset [--engine Unity]
-./bin/tripo-agent run ...
-./bin/tripo-agent package
-```
+| 命令 | 作用 |
+| --- | --- |
+| `setup` | 配置 API key、检查依赖，并在确认后安装 npm 包。 |
+| `doctor` | 检查本地运行环境。 |
+| `install` | 安装 Claude Code `/tripo-agent` slash command。 |
+| `ask "<目标>"` | 不消耗额度地解析游戏资产目标。 |
+| `architecture` | 解释 Superpowers 风格的 skill 架构。 |
+| `inventory ...` | 检查单图、多视图、文本或已有模型输入。 |
+| `plan ...` | 生成 asset brief、模型路线、导出路线、rig 路线和制作方案。 |
+| `preflight ...` | 报告缺失输入、成本风险和用户确认点。 |
+| `synthesize-views ...` | 生成可选多视图图片供用户确认。 |
+| `generate ...` | 创建 Tripo 3D 生成任务并下载输出。 |
+| `convert [--format FBX]` | 通过 Tripo conversion API 转换模型格式。 |
+| `rig [--preset unity-humanoid] [--apply]` | 运行 rig precheck；只有显式确认后才应用 auto-rig。 |
+| `inspect` | 运行基础本地文件检查。 |
+| `deep-check [--engine Unity]` | 如果有 Blender，运行更深的可用性检查。 |
+| `package-asset [--engine Unity]` | 打包生成资产，方便导入游戏引擎。 |
+| `run ...` | 运行带保护的端到端流程。 |
+| `package` | 创建 `dist/tripo-game-agent-superpowers.zip` 分享包。 |
+
+运行 `./bin/tripo-agent --help` 查看精确参数形式。
 
 ## 输出文件
-
-运行过程中会生成：
 
 ```text
 workspace/
@@ -273,43 +243,9 @@ outputs/<asset_id>/
   <asset_id>_Unity_package.zip
 ```
 
-## Superpowers 结构
+`.env.local`、`assets/`、`workspace/*.json`、`outputs/` 都已加入 gitignore。
 
-```text
-tripo-game-agent-superpowers/
-├── CLAUDE.md
-├── commands/
-│   └── tripo-agent.md
-├── skills/
-│   ├── using-tripo-game-agent/
-│   ├── game-asset-intake/
-│   ├── game-asset-view-strategy/
-│   ├── game-asset-planning/
-│   ├── game-asset-preflight/
-│   ├── game-asset-production/
-│   ├── game-asset-readiness/
-│   └── game-asset-memory/
-├── bin/
-├── scripts/
-├── content/
-├── workspace/
-├── outputs/
-└── assets/
-```
-
-Skill 调用顺序：
-
-```text
-game-asset-intake
-  -> game-asset-view-strategy
-  -> game-asset-planning
-  -> game-asset-preflight
-  -> game-asset-production
-  -> game-asset-readiness
-  -> game-asset-memory
-```
-
-## 当前覆盖
+## Agent 工作流覆盖范围
 
 已经实现的真实路径：
 
@@ -337,35 +273,25 @@ game-asset-intake
 - 和现有角色模块的拼接适配。
 - 不重新生成整体模型的局部网格编辑。
 
-## Walkthrough
-
-五分钟路径：
-
-```bash
-./bin/tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼"
-./bin/tripo-agent architecture
-./bin/tripo-agent setup
-./bin/tripo-agent run --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" --input assets/mecha.png --engine Unity
-```
-
-然后查看：
+## 仓库结构
 
 ```text
-workspace/preflight_report.md
-outputs/<asset_id>/readiness_report.md
-outputs/<asset_id>/deep_readiness_report.json
-outputs/<asset_id>/<asset_id>_Unity_package.zip
-skills/using-tripo-game-agent/SKILL.md
-```
-
-## 打包分享
-
-```bash
-./bin/tripo-agent package
-```
-
-输出：
-
-```text
-dist/tripo-game-agent-superpowers.zip
+tripo-game-agent-superpowers/
+├── CLAUDE.md
+├── commands/
+│   └── tripo-agent.md
+├── skills/
+│   ├── using-tripo-game-agent/
+│   ├── game-asset-intake/
+│   ├── game-asset-view-strategy/
+│   ├── game-asset-planning/
+│   ├── game-asset-preflight/
+│   ├── game-asset-production/
+│   ├── game-asset-readiness/
+│   └── game-asset-memory/
+├── bin/
+├── scripts/
+├── workspace/
+├── outputs/
+└── assets/
 ```

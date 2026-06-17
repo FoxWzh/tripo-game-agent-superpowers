@@ -4,56 +4,84 @@
 
 A local Superpowers-style agent plugin for turning game-asset goals into executable Tripo workflows.
 
-The project follows the pattern popularized by [`obra/superpowers`](https://github.com/obra/superpowers): `CLAUDE.md` is the boot instruction, `using-tripo-game-agent` is the bootstrap skill, and the `game-asset-*` skills encode stable workflow knowledge and output contracts.
+The project follows the pattern popularized by [`obra/superpowers`](https://github.com/obra/superpowers): `CLAUDE.md` is the boot instruction, `commands/tripo-agent.md` is the slash-command entry, `using-tripo-game-agent` is the bootstrap skill, and the `game-asset-*` skills encode stable workflow knowledge.
 
-This is not a mock-only project. Real generation, format conversion, optional multiview generation, and rig precheck use Tripo APIs. If `TRIPO_API_KEY` is missing, the workflow stops at setup or preflight.
-
-## What It Demonstrates
-
-Game users usually describe outcomes:
-
-```text
-I need a Unity-ready mech character, quad mesh, 15k faces, with rigging.
-```
-
-They do not naturally describe the production pipeline:
-
-```text
-inventory inputs -> choose single-image or multiview route -> choose P1/H3
--> generate 3D -> convert to FBX -> rig precheck -> readiness -> package
-```
-
-This plugin shows how an agent product layer can translate a user goal into a guarded, executable game-asset workflow.
-
-Current flow:
-
-```text
-Intent Intake
-  -> Input Inventory / View Strategy
-  -> Model Routing
-  -> Export Route
-  -> Rig Route
-  -> Production Plan
-  -> Preflight / Human Confirmation
-  -> Tripo Generation
-  -> Conversion
-  -> Rig Precheck / Auto Rig if confirmed
-  -> Basic Readiness
-  -> Deep Readiness
-  -> Package
-  -> Memory
-```
+Real generation, format conversion, optional multiview generation, and rig precheck use Tripo APIs. If `TRIPO_API_KEY` is missing, the workflow stops at setup or preflight.
 
 ## Quick Start
-
-Clone:
 
 ```bash
 git clone https://github.com/FoxWzh/tripo-game-agent-superpowers.git
 cd tripo-game-agent-superpowers
+./bin/tripo-agent setup
 ```
 
-Run the no-credit local walkthrough first:
+`setup` asks for `TRIPO_API_KEY` when missing, checks local dependencies, and asks before installing npm packages.
+
+## Use As An Agent Plugin
+
+Use this path when you want Claude Code or Codex to guide the workflow through skills instead of calling individual CLI commands yourself.
+
+### Claude Code
+
+Install the slash command:
+
+```bash
+./bin/tripo-agent install
+```
+
+Then open Claude Code from this repository root and run:
+
+```text
+/tripo-agent ask "Unity-ready mech character, quad mesh, 15k faces, rigged"
+/tripo-agent architecture
+/tripo-agent about
+```
+
+The slash command delegates to the local Superpowers-style files:
+
+```text
+CLAUDE.md
+commands/tripo-agent.md
+skills/using-tripo-game-agent/SKILL.md
+skills/game-asset-*/SKILL.md
+```
+
+For real generation, put reference files under `assets/` and ask the agent to run the guarded workflow:
+
+```text
+/tripo-agent run --prompt "Unity-ready mech character, quad mesh, 15k faces, rigged" --input assets/mecha.png --engine Unity
+```
+
+The agent should run intake, input inventory, planning, preflight, human confirmation, production, readiness review, and packaging in order.
+
+### Codex
+
+This repo includes a Codex plugin manifest:
+
+```text
+.codex-plugin/plugin.json
+```
+
+Import this repository directory as a local Codex plugin. The plugin points Codex at:
+
+```text
+skills/
+```
+
+After importing, ask Codex for the Tripo game-asset workflow, for example:
+
+```text
+Use the Tripo Game Agent workflow to plan a Unity-ready mech character from assets/mecha.png.
+```
+
+For real API calls, run `./bin/tripo-agent setup` first so the local `.env.local` and dependencies are ready.
+
+## Use The CLI
+
+Use this path when you want deterministic commands, local files, and explicit checkpoints.
+
+### No-Credit Preview
 
 ```bash
 ./bin/tripo-agent ask "Unity-ready mech character, quad mesh, 15k faces, rigged"
@@ -62,32 +90,15 @@ Run the no-credit local walkthrough first:
 
 This shows the decision flow without creating a Tripo task.
 
-## Setup For Real API Calls
+### Full Guarded Run
 
-Run:
-
-```bash
-./bin/tripo-agent setup
-```
-
-`setup` will:
-
-- Ask for `TRIPO_API_KEY` if missing and save it to `.env.local`.
-- Check Node / npm / curl / zip.
-- Check Blender, optional but recommended for deep readiness.
-- Ask before running `npm install` if dependencies are missing.
-
-`.env.local`, `assets/`, `workspace/*.json`, and `outputs/` are gitignored.
-
-## Try It Locally
-
-Put a reference image under `assets/`, for example:
+Put a reference image under `assets/`:
 
 ```text
 assets/mecha.png
 ```
 
-Run the guarded workflow:
+Run:
 
 ```bash
 ./bin/tripo-agent run \
@@ -96,7 +107,7 @@ Run the guarded workflow:
   --engine Unity
 ```
 
-`run` does:
+`run` executes:
 
 ```text
 doctor
@@ -129,9 +140,7 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
 ./bin/tripo-agent run ... --no-open
 ```
 
-## Step-By-Step Mode
-
-Use this when you want to inspect every decision:
+### Step-By-Step Run
 
 ```bash
 ./bin/tripo-agent inventory --input assets/mecha.png
@@ -149,7 +158,7 @@ Use this when you want to inspect every decision:
   --rig-preset unity-humanoid
 
 ./bin/tripo-agent generate --input assets/mecha.png
-./bin/tripo-agent convert
+./bin/tripo-agent convert --format FBX
 ./bin/tripo-agent rig --preset unity-humanoid
 ./bin/tripo-agent inspect
 ./bin/tripo-agent deep-check --engine Unity
@@ -162,29 +171,21 @@ Use this when you want to inspect every decision:
 ./bin/tripo-agent rig --preset unity-humanoid --apply
 ```
 
-## Multiview Workflow
+### Multiview Run
 
-If the user already has real multiview images, prefer those:
+If you already have real multiview images, prefer them:
 
 ```bash
-./bin/tripo-agent inventory \
-  --front assets/mecha_front.png \
-  --back assets/mecha_back.png \
-  --left assets/mecha_left.png \
-  --right assets/mecha_right.png
-
-./bin/tripo-agent plan \
+./bin/tripo-agent run \
   --prompt "Unity-ready mech character, quad mesh, 15k faces, rigged" \
-  --engine Unity
-
-./bin/tripo-agent generate \
   --front assets/mecha_front.png \
   --back assets/mecha_back.png \
   --left assets/mecha_left.png \
-  --right assets/mecha_right.png
+  --right assets/mecha_right.png \
+  --engine Unity
 ```
 
-If the user only has one image, ask before generating optional multiview images:
+If you only have one image, generate optional multiview images only after user confirmation:
 
 ```bash
 ./bin/tripo-agent synthesize-views --input assets/mecha_front.png
@@ -192,62 +193,31 @@ If the user only has one image, ask before generating optional multiview images:
 
 Generated views are opened for confirmation. Do not proceed to 3D until the user accepts them.
 
-## Install Into Claude Code
-
-Install the slash command:
-
-```bash
-./bin/tripo-agent install
-```
-
-Then open Claude Code in this repository and run:
-
-```text
-/tripo-agent ask "Unreal boss character, UE Manny compatible rig"
-/tripo-agent architecture
-/tripo-agent about
-```
-
-The slash command delegates to the same Superpowers-style workflow defined in `CLAUDE.md` and `skills/`.
-
-## Install Into Codex
-
-This repo includes a Codex plugin manifest:
-
-```text
-.codex-plugin/plugin.json
-```
-
-Import the repository directory as a local Codex plugin. The core skills live under:
-
-```text
-skills/
-```
-
 ## Command Reference
 
-```bash
-./bin/tripo-agent setup
-./bin/tripo-agent doctor
-./bin/tripo-agent ask "<game asset goal>"
-./bin/tripo-agent architecture
-./bin/tripo-agent inventory ...
-./bin/tripo-agent plan ...
-./bin/tripo-agent preflight ...
-./bin/tripo-agent synthesize-views ...
-./bin/tripo-agent generate ...
-./bin/tripo-agent convert [--format FBX]
-./bin/tripo-agent rig [--preset unity-humanoid] [--apply]
-./bin/tripo-agent inspect
-./bin/tripo-agent deep-check [--engine Unity]
-./bin/tripo-agent package-asset [--engine Unity]
-./bin/tripo-agent run ...
-./bin/tripo-agent package
-```
+| Command | Purpose |
+| --- | --- |
+| `setup` | Configure API key, check dependencies, install npm packages after confirmation. |
+| `doctor` | Check local runtime prerequisites. |
+| `install` | Install the Claude Code `/tripo-agent` slash command. |
+| `ask "<goal>"` | Parse a game-asset goal without spending credits. |
+| `architecture` | Explain the Superpowers-style skill architecture. |
+| `inventory ...` | Inspect available single-image, multiview, text, or existing-model inputs. |
+| `plan ...` | Create asset brief, model route, export route, rig route, and production plan. |
+| `preflight ...` | Report missing inputs, cost risk, and user-confirmation gates. |
+| `synthesize-views ...` | Generate optional multiview images for confirmation. |
+| `generate ...` | Create a Tripo 3D generation task and download outputs. |
+| `convert [--format FBX]` | Convert generated model through the Tripo conversion API. |
+| `rig [--preset unity-humanoid] [--apply]` | Run rig precheck; apply auto-rig only with explicit confirmation. |
+| `inspect` | Run basic local file readiness checks. |
+| `deep-check [--engine Unity]` | Run deeper Blender-based readiness checks when Blender is available. |
+| `package-asset [--engine Unity]` | Package the generated asset for engine import. |
+| `run ...` | Run the guarded end-to-end workflow. |
+| `package` | Create `dist/tripo-game-agent-superpowers.zip` for sharing. |
+
+Run `./bin/tripo-agent --help` for the exact argument forms.
 
 ## Output Files
-
-During a run:
 
 ```text
 workspace/
@@ -273,43 +243,9 @@ outputs/<asset_id>/
   <asset_id>_Unity_package.zip
 ```
 
-## Superpowers Structure
+`.env.local`, `assets/`, `workspace/*.json`, and `outputs/` are gitignored.
 
-```text
-tripo-game-agent-superpowers/
-├── CLAUDE.md
-├── commands/
-│   └── tripo-agent.md
-├── skills/
-│   ├── using-tripo-game-agent/
-│   ├── game-asset-intake/
-│   ├── game-asset-view-strategy/
-│   ├── game-asset-planning/
-│   ├── game-asset-preflight/
-│   ├── game-asset-production/
-│   ├── game-asset-readiness/
-│   └── game-asset-memory/
-├── bin/
-├── scripts/
-├── content/
-├── workspace/
-├── outputs/
-└── assets/
-```
-
-Skill order:
-
-```text
-game-asset-intake
-  -> game-asset-view-strategy
-  -> game-asset-planning
-  -> game-asset-preflight
-  -> game-asset-production
-  -> game-asset-readiness
-  -> game-asset-memory
-```
-
-## Current Coverage
+## What The Agent Workflow Covers
 
 Implemented real paths:
 
@@ -337,35 +273,25 @@ Not fully automated yet:
 - Modular fit to an existing character.
 - Localized mesh edits without full regeneration.
 
-## Walkthrough
-
-Five-minute path:
-
-```bash
-./bin/tripo-agent ask "Unity-ready mech character, quad mesh, 15k faces, rigged"
-./bin/tripo-agent architecture
-./bin/tripo-agent setup
-./bin/tripo-agent run --prompt "Unity-ready mech character, quad mesh, 15k faces, rigged" --input assets/mecha.png --engine Unity
-```
-
-Then open:
+## Repository Structure
 
 ```text
-workspace/preflight_report.md
-outputs/<asset_id>/readiness_report.md
-outputs/<asset_id>/deep_readiness_report.json
-outputs/<asset_id>/<asset_id>_Unity_package.zip
-skills/using-tripo-game-agent/SKILL.md
-```
-
-## Package For Sharing
-
-```bash
-./bin/tripo-agent package
-```
-
-Output:
-
-```text
-dist/tripo-game-agent-superpowers.zip
+tripo-game-agent-superpowers/
+├── CLAUDE.md
+├── commands/
+│   └── tripo-agent.md
+├── skills/
+│   ├── using-tripo-game-agent/
+│   ├── game-asset-intake/
+│   ├── game-asset-view-strategy/
+│   ├── game-asset-planning/
+│   ├── game-asset-preflight/
+│   ├── game-asset-production/
+│   ├── game-asset-readiness/
+│   └── game-asset-memory/
+├── bin/
+├── scripts/
+├── workspace/
+├── outputs/
+└── assets/
 ```
