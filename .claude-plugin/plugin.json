@@ -6,6 +6,8 @@
     "name": "FOX Wu"
   },
   "homepage": "https://github.com/FoxWzh/tripo-game-agent-superpowers",
+  "commands": "./commands",
+  "skills": "./skills",
   "keywords": [
     "tripo",
     "superpowers",

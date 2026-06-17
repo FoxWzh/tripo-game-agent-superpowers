@@ -25,6 +25,9 @@ function fileTypeForPath(filePath) {
 }
 
 async function uploadImage(client, filePath) {
+  if (/^https?:\/\//i.test(filePath)) {
+    throw new Error(`Multiview upload requires a local file path, not URL: ${filePath}`);
+  }
   const result = await client.uploadFile(path.resolve(filePath));
   const token = normalizeUploadToken(result);
   if (!token) {

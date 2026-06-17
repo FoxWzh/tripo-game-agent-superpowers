@@ -18,7 +18,7 @@ cd tripo-game-agent-superpowers
 ./bin/tripo-agent setup
 ```
 
-`setup` asks for `TRIPO_API_KEY` when missing, checks local dependencies, and installs missing npm packages. For automation, pass the key through the environment and auto-accept dependency installation:
+`setup` asks for `TRIPO_API_KEY` when missing, checks local dependencies, and installs missing npm packages. The key is stored locally in `.env.local`, which is gitignored; do not commit it. For automation, pass the key through the environment and auto-accept dependency installation:
 
 ```bash
 TRIPO_API_KEY=tsk_... TRIPO_AGENT_YES=1 ./bin/tripo-agent setup
@@ -136,7 +136,7 @@ Run:
   --engine Unity
 ```
 
-`run` executes:
+`run` defaults to the `Standard` tier:
 
 ```text
 doctor
@@ -148,11 +148,16 @@ doctor
   -> convert
   -> inspect
   -> deep-check
-  -> package
-  -> memory
+  -> package + memory capture
 ```
 
-For automated runs where you already accept the risk:
+Tiers are explicit:
+
+- `--tier Draft`: generate and inspect only.
+- `--tier Standard`: inventory, plan, preflight, generate, convert, inspect, deep-check, package, and memory capture.
+- `--tier Full`: Standard plus character rig precheck. Paid auto-rig still requires `rig --apply` after user confirmation.
+
+For automated runs where preflight can proceed and you already accept generation:
 
 ```bash
 ./bin/tripo-agent run \
@@ -160,6 +165,12 @@ For automated runs where you already accept the risk:
   --input assets/mecha.png \
   --engine Unity \
   --yes
+```
+
+If preflight returns high-value missing inputs, `run --yes` still stops. Continue only after adding the requested inputs or after explicit user approval:
+
+```bash
+./bin/tripo-agent run ... --yes --accept-risk
 ```
 
 Disable auto-opening generated files:
@@ -195,7 +206,7 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
 ./bin/tripo-agent package-asset --engine Unity
 ```
 
-`rig` defaults to precheck only. To spend rigging credits and apply auto-rig:
+`run --tier Full` performs character rig precheck only. The standalone `rig` command also defaults to precheck only. To spend rigging credits and apply auto-rig:
 
 ```bash
 ./bin/tripo-agent rig --preset unity-humanoid --apply
@@ -222,6 +233,8 @@ If you only have one image, generate optional multiview images only after user c
 ```
 
 Generated views are opened for confirmation. Do not proceed to 3D until the user accepts them.
+
+Text-to-model is supported as a real Tripo route when the user only has a prompt, but it is treated as higher risk for game assets. Preflight will ask for explicit approval or better reference inputs before spending credits.
 
 ## Command Reference
 
@@ -280,7 +293,7 @@ outputs/<asset_id>/
   <asset_id>_Unity_package.zip
 ```
 
-`.env.local`, `assets/`, `workspace/*.json`, and `outputs/` are gitignored.
+`.env.local`, `assets/`, generated `workspace/*.json` / `workspace/*.md`, asset memory records, and `outputs/` are gitignored.
 
 ## What The Agent Workflow Covers
 
@@ -289,12 +302,12 @@ Implemented real paths:
 - API key and dependency setup.
 - Input inventory and view strategy.
 - P1 / H3 / H2 / Turbo / v1.4 model routing.
-- Image-to-model and multiview-to-model payload paths.
+- Image-to-model, multiview-to-model, and text-to-model payload paths.
 - Optional multiview image generation.
 - Preflight cost and missing-input gate.
 - Tripo generation polling and downloads.
 - Tripo conversion API for FBX/OBJ/STL/GLTF-style export.
-- Rig precheck / auto-rig command path.
+- Rig precheck in guarded runs, plus an explicit auto-rig command path.
 - Basic GLB/FBX file inspection.
 - Blender deep readiness path, skipped honestly if Blender is missing.
 - Engine import checklist.

@@ -18,7 +18,7 @@ cd tripo-game-agent-superpowers
 ./bin/tripo-agent setup
 ```
 
-`setup` 会在缺少 `TRIPO_API_KEY` 时要求输入，检查本地依赖，并安装缺失的 npm 依赖。自动化场景可以通过环境变量传入 key，并自动确认依赖安装：
+`setup` 会在缺少 `TRIPO_API_KEY` 时要求输入，检查本地依赖，并安装缺失的 npm 依赖。Key 会保存在本地 `.env.local`，该文件已 gitignore；不要提交它。自动化场景可以通过环境变量传入 key，并自动确认依赖安装：
 
 ```bash
 TRIPO_API_KEY=tsk_... TRIPO_AGENT_YES=1 ./bin/tripo-agent setup
@@ -136,7 +136,7 @@ assets/mecha.png
   --engine Unity
 ```
 
-`run` 会执行：
+`run` 默认使用 `Standard` 档位：
 
 ```text
 doctor
@@ -148,11 +148,16 @@ doctor
   -> convert
   -> inspect
   -> deep-check
-  -> package
-  -> memory
+  -> package + memory capture
 ```
 
-如果已经接受风险，需要自动执行：
+档位是显式的：
+
+- `--tier Draft`：只生成并 inspect。
+- `--tier Standard`：inventory、plan、preflight、generate、convert、inspect、deep-check、package 和 memory capture。
+- `--tier Full`：在 Standard 基础上，对角色执行 rig precheck。真正消耗 rigging credit 的 auto-rig 仍需要用户确认后单独执行 `rig --apply`。
+
+如果 preflight 可以继续，并且已经接受生成，需要自动执行：
 
 ```bash
 ./bin/tripo-agent run \
@@ -160,6 +165,12 @@ doctor
   --input assets/mecha.png \
   --engine Unity \
   --yes
+```
+
+如果 preflight 发现高价值缺失输入，`run --yes` 仍会停住。只有补齐输入，或用户明确接受风险后，才继续：
+
+```bash
+./bin/tripo-agent run ... --yes --accept-risk
 ```
 
 关闭生成文件自动打开：
@@ -195,7 +206,7 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
 ./bin/tripo-agent package-asset --engine Unity
 ```
 
-`rig` 默认只做 precheck。如果要消耗 rigging 额度并应用 auto-rig：
+`run --tier Full` 对角色只做 rig precheck。`rig` 命令默认也只做 precheck。如果要消耗 rigging 额度并应用 auto-rig：
 
 ```bash
 ./bin/tripo-agent rig --preset unity-humanoid --apply
@@ -222,6 +233,8 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
 ```
 
 生成后的多视图会自动打开供用户确认。用户接受前，不应继续进入 3D 生成。
+
+纯文本生成也是真实 Tripo 路线，但对游戏资产风险更高。preflight 会要求用户明确接受风险，或补充更好的参考图/多视图后再消耗 credit。
 
 ## 命令参考
 
@@ -280,7 +293,7 @@ outputs/<asset_id>/
   <asset_id>_Unity_package.zip
 ```
 
-`.env.local`、`assets/`、`workspace/*.json`、`outputs/` 都已加入 gitignore。
+`.env.local`、`assets/`、生成的 `workspace/*.json` / `workspace/*.md`、asset memory 记录、`outputs/` 都已加入 gitignore。
 
 ## Agent 工作流覆盖范围
 
@@ -289,12 +302,12 @@ outputs/<asset_id>/
 - API key 和依赖检查。
 - 输入盘点和视图策略。
 - P1 / H3 / H2 / Turbo / v1.4 模型路由。
-- 图生 3D 和多视图生 3D payload 路径。
+- 图生 3D、多视图生 3D、文生 3D payload 路径。
 - 可选多视图图片生成。
 - 生成前的成本和缺失信息检查。
 - Tripo generation polling 和文件下载。
 - Tripo conversion API，支持 FBX/OBJ/STL/GLTF 风格导出。
-- Rig precheck / auto-rig 命令路径。
+- 带保护流程里的 rig precheck，以及显式 auto-rig 命令路径。
 - 基础 GLB/FBX 文件检查。
 - Blender deep readiness 路径；如果缺少 Blender，会明确跳过。
 - 引擎导入 checklist。

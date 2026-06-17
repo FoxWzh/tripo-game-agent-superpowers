@@ -56,7 +56,7 @@ Always answer:
 
 Block generation when:
 
-- No reference image or supported input URL exists.
+- No prompt, reference image, supported input URL, multiview set, or existing model exists.
 - The reference image path is missing.
 - The target game engine is unknown.
 - A modular asset request lacks a base asset and promises fit/attachment.
@@ -68,6 +68,7 @@ Ask before generation when:
 - Poly budget is unclear and the user cares about runtime performance.
 - Asset needs exact scale, pivot, socket, collider, or LOD behavior.
 - The requested output is FBX but current Tripo result path may only return GLB until conversion is added.
+- The route is text-to-model and the user has not accepted the higher risk of weak silhouette, scale, style consistency, and hidden-side details.
 
 Proceed when:
 

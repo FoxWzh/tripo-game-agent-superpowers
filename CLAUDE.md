@@ -58,10 +58,11 @@ workspace/preflight_report.json
 workspace/generation_request.json
 workspace/production_result.json
 workspace/conversion_result.json
-workspace/rig_result.json
+workspace/rig_result.json, for character rig precheck in Full tier
 workspace/deep_readiness_report.json
 workspace/readiness_report.json
 workspace/package_result.json
+workspace/asset_memory/<asset_id>.json
 outputs/<asset_id>/
 ```
 
@@ -79,6 +80,6 @@ Before spending credits, protect the user by answering three questions:
 2. What extra input would most improve this specific Tripo call?
 3. Which known game-asset risks remain unsolved and need either confirmation, fallback, or roadmap framing?
 
-Do not choose the Tripo model route until both user intent and input inventory are known. Prefer real user multiview images over generated multiview images, and prefer generated multiview images over risky single-image 3D only when the user confirms.
+Do not choose the Tripo model route until both user intent and input inventory are known. Prefer real user multiview images over generated multiview images, and prefer generated multiview images over risky single-image 3D only when the user confirms. Text-to-model is a real route, but for game assets it is high risk and should be framed as a user-approved tradeoff before spending credits.
 
 Use Chinese primarily. Keep standard game/3D terms in English where appropriate: FBX, GLB, PBR, Retopo, Rig, LOD, Unity, Unreal.

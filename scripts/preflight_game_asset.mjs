@@ -34,12 +34,21 @@ function imageAssessment({ args, brief, inventory }) {
   const issues = [];
   const improvements = [];
 
-  if (!input && !viewCount) {
+  if (!input && !viewCount && inventory?.input_mode !== 'text_only') {
     issues.push({
       severity: 'blocker',
       item: '缺少参考图或多视图输入',
-      impact: '无法调用 Tripo image_to_model；纯 text-to-3D 不在当前真实执行闭环内。',
-      how_to_fix: '提供 --input assets/<reference>.png，或提供 front/back/left/right 多视图。'
+      impact: '当前路线需要 image-to-model 或 multiview-to-model 输入，不能安全创建付费任务。',
+      how_to_fix: '提供 --input assets/<reference>.png，提供 front/back/left/right 多视图，或改走 text-to-model 并接受其风险。'
+    });
+  }
+
+  if (inventory?.input_mode === 'text_only') {
+    improvements.push({
+      priority: 'high',
+      item: '确认是否接受纯文本生成',
+      why: 'Text-to-model 可以真实执行，但游戏资产的轮廓、比例、背面细节和风格一致性风险高于参考图或多视图。',
+      suggested_input: '--input assets/<reference>.png，或显式接受 text-to-model 风险'
     });
   }
 
@@ -247,6 +256,8 @@ async function main() {
   console.log(`Report: ${outPath}`);
   if (blockers.length && !args['allow-blockers']) {
     process.exitCode = 2;
+  } else if (report.recommendation === 'ask_user' && args['strict-user-gates'] && !args['accept-risk']) {
+    process.exitCode = 3;
   }
 }
 

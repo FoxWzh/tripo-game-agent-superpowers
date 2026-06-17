@@ -99,6 +99,9 @@ async function main() {
   for (const [label, info] of Object.entries({ input, base_asset: baseAsset, ...views })) {
     if (info && !info.exists) blockers.push(`${label} does not exist: ${info.path}`);
     if (info && !info.supported) blockers.push(`${label} has unsupported extension: ${info.extension}`);
+    if (['front', 'back', 'left', 'right'].includes(label) && info?.is_url) {
+      blockers.push(`${label} must be a local image path for multiview upload: ${info.path}`);
+    }
   }
   if (inputMode === 'missing_input') {
     blockers.push('No prompt, image, multiview images, or existing model was provided.');

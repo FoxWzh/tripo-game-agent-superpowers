@@ -28,7 +28,26 @@ const TEXTURE_QUALITY_CREDITS = {
   extreme: 30
 };
 
-export function estimateCredits({ taskType = 'image_to_model', modelFamily = 'P1', textureQuality = 'standard', needsConversion = true, rigRequired = false, includeGeneratedMultiview = false } = {}) {
+export function estimateConversionCredits(options = {}) {
+  const items = [{ label: 'format conversion', credits: 5 }];
+  const usesAdvancedConversion = Boolean(
+    options.quad
+    || options.face_limit
+    || options.smart_low_poly
+    || options.texture_format
+    || options.pivot_to_center_bottom
+    || options.fbx_preset
+  );
+  if (usesAdvancedConversion) {
+    items.push({ label: 'conversion advanced parameters', credits: 5 });
+  }
+  return {
+    total: items.reduce((sum, item) => sum + item.credits, 0),
+    items
+  };
+}
+
+export function estimateCredits({ taskType = 'image_to_model', modelFamily = 'P1', textureQuality = 'standard', needsConversion = true, conversionOptions = {}, rigRequired = false, includeGeneratedMultiview = false } = {}) {
   const items = [];
   const base = MODEL_BASE_CREDITS[taskType]?.[modelFamily] ?? MODEL_BASE_CREDITS.image_to_model.P1;
   items.push({ label: `${taskType} (${modelFamily})`, credits: base });
@@ -42,7 +61,7 @@ export function estimateCredits({ taskType = 'image_to_model', modelFamily = 'P1
   }
 
   if (needsConversion) {
-    items.push({ label: 'format conversion', credits: 5 });
+    items.push(...estimateConversionCredits(conversionOptions).items);
   }
 
   if (rigRequired) {

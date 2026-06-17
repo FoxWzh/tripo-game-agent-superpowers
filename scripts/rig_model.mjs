@@ -9,11 +9,32 @@ function taskIdFromResult(result) {
   return result?.task_id || result?.conversion_task_id || result?.source_task_id;
 }
 
+function readMatchingConversion(defaultPath, production) {
+  const conversion = readJson(defaultPath, null);
+  if (!conversion) return production;
+  if (production?.asset_id && conversion?.asset_id && conversion.asset_id !== production.asset_id) {
+    return production;
+  }
+  return conversion;
+}
+
 function normalizeRigType(preset) {
   const value = String(preset || 'humanoid').toLowerCase();
   if (value.includes('ue')) return 'humanoid';
   if (value.includes('unity')) return 'humanoid';
   return value;
+}
+
+function normalizeRigSpec(preset) {
+  const value = String(preset || '').toLowerCase();
+  if (value.includes('tripo')) return 'tripo';
+  return 'mixamo';
+}
+
+function normalizeOutFormat(format) {
+  const value = String(format || 'fbx').toLowerCase();
+  if (value === 'glb' || value === 'fbx') return value;
+  throw new Error(`Unsupported Tripo rig out_format: ${format}. Use glb or fbx.`);
 }
 
 async function download(url, filePath) {
@@ -47,7 +68,9 @@ async function main() {
   ensureDirs();
   const args = parseArgs(process.argv.slice(2));
   const production = readJson(args.production || path.join(workspaceDir, 'production_result.json'), {});
-  const conversion = readJson(args.conversion || path.join(workspaceDir, 'conversion_result.json'), production);
+  const conversion = args.conversion
+    ? readJson(args.conversion, production)
+    : readMatchingConversion(path.join(workspaceDir, 'conversion_result.json'), production);
   const plan = readJson(args.plan || path.join(workspaceDir, 'production_plan.json'), {});
   const outDir = path.resolve(args.out || production.output_dir || conversion.output_dir);
   fs.mkdirSync(outDir, { recursive: true });
@@ -60,7 +83,8 @@ async function main() {
   const rigRoute = plan.rig_route || {};
   const preset = args.preset || args['rig-preset'] || rigRoute.preset || 'unity-humanoid';
   const rigType = normalizeRigType(preset);
-  const outFormat = String(args.format || rigRoute.output_format || 'FBX').toUpperCase();
+  const outFormat = normalizeOutFormat(args.format || rigRoute.output_format || 'fbx');
+  const spec = normalizeRigSpec(args.spec || rigRoute.spec || preset);
   const client = new TripoClient();
 
   const precheckPayload = {
@@ -92,13 +116,13 @@ async function main() {
     original_model_task_id: sourceTaskId,
     out_format: outFormat,
     rig_type: rigType,
-    spec: preset
+    spec
   };
   const rig = await runTask({ client, payload: rigPayload, outDir, label: 'rig', args });
   const urls = collectDownloadUrls(rig.task);
   const downloads = [];
   for (const item of urls) {
-    const filePath = path.join(outDir, 'rigged', `${slugify(`${item.name}-${outFormat}`)}${path.extname(new URL(item.url).pathname) || `.${outFormat.toLowerCase()}`}`);
+    const filePath = path.join(outDir, 'rigged', `${slugify(`${item.name}-${outFormat}`)}${path.extname(new URL(item.url).pathname) || `.${outFormat}`}`);
     await download(item.url, filePath);
     downloads.push({ name: item.name, url: item.url, path: filePath });
   }
@@ -111,6 +135,7 @@ async function main() {
     rig_task_id: rig.taskId,
     preset,
     rig_type: rigType,
+    spec,
     format: outFormat,
     applied: true,
     downloads,

@@ -35,7 +35,11 @@ Preferred full chain:
 ./bin/tripo-agent run --prompt "<game asset request>" --input assets/<reference-image>.png --engine Unity
 ```
 
-This runs doctor, planning, preflight, user confirmation, generation, optional conversion, inspection, and packaging.
+This runs doctor, inventory, planning, preflight, user confirmation, and then follows the selected tier:
+
+- `Draft`: generate and inspect only.
+- `Standard`: generate, convert when needed, inspect, deep-check, package, and memory capture.
+- `Full`: Standard plus character rig precheck.
 
 If running manually, run preflight first:
 
@@ -62,6 +66,8 @@ If the Production Plan route is `multiview_to_model`, pass real or generated vie
   --left assets/left.png \
   --right assets/right.png
 ```
+
+If the Production Plan route is `text_to_model`, generation can run from the plan prompt, but the agent must treat it as a high-risk game-asset route and require explicit user approval after preflight.
 
 If the user chooses generated multiview first:
 
@@ -111,7 +117,7 @@ Only if the user confirms:
 ./bin/tripo-agent rig --preset unity-humanoid --apply
 ```
 
-The rig command uses Tripo `animate_prerigcheck` before `animate_rig`, downloads rigged files under `outputs/<asset_id>/rigged/`, and opens them for confirmation.
+The rig command uses Tripo `animate_prerigcheck` before `animate_rig`. The `run --tier Full` command performs character rig precheck only; paid auto-rig requires a separate `rig --apply` command after user confirmation. Applied rigging downloads files under `outputs/<asset_id>/rigged/` and opens them for confirmation.
 
 ### Mesh Optimization
 

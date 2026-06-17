@@ -12,8 +12,19 @@ const MODEL_VERSIONS = {
   v14: 'v1.4-20240625'
 };
 
+function parsePolyBudgetFromText(text) {
+  const compactMatch = text.match(/(\d+(?:\.\d+)?)\s*(k|千|万)\s*(faces?|面|tris?|triangles?|多边形|poly|polys)?/i);
+  if (compactMatch) {
+    const multiplier = compactMatch[2] === '万' ? 10000 : 1000;
+    return Math.round(Number(compactMatch[1]) * multiplier);
+  }
+  const explicitMatch = text.match(/(\d+(?:\.\d+)?)\s*(faces?|面|tris?|triangles?|多边形|poly|polys)/i);
+  return explicitMatch ? Math.round(Number(explicitMatch[1])) : null;
+}
+
 function inferBrief({ prompt, engine, assetType, polyBudget }) {
   const text = `${prompt || ''} ${engine || ''} ${assetType || ''}`.toLowerCase();
+  const inferredPolyBudget = parsePolyBudgetFromText(text);
   const inferredEngine = engine
     || (text.includes('unreal') || text.includes(' ue ') ? 'Unreal' : null)
     || (text.includes('roblox') ? 'Roblox' : null)
@@ -28,7 +39,7 @@ function inferBrief({ prompt, engine, assetType, polyBudget }) {
     || 'character';
 
   const rigRequired = inferredType === 'character';
-  const faceLimit = Number(polyBudget || (inferredType === 'character' ? 15000 : 10000));
+  const faceLimit = Number(polyBudget || inferredPolyBudget || (inferredType === 'character' ? 15000 : 10000));
 
   return {
     asset_id: slugify(`${inferredEngine}-${inferredType}-${Date.now()}`),
@@ -213,6 +224,14 @@ function planForBrief(brief, { inventory = null, tier = 'Standard', model = null
     modelFamily: modelRoute.model_family,
     textureQuality: 'standard',
     needsConversion: exportRoute.needs_conversion,
+    conversionOptions: {
+      quad: tripoParamsForBrief(brief, modelRoute).quad,
+      face_limit: tripoParamsForBrief(brief, modelRoute).face_limit,
+      smart_low_poly: tripoParamsForBrief(brief, modelRoute).smart_low_poly,
+      texture_format: exportRoute.texture_format,
+      pivot_to_center_bottom: brief.engine === 'Unity',
+      fbx_preset: exportRoute.fbx_preset
+    },
     rigRequired: rigRoute.required && tier === 'Full',
     includeGeneratedMultiview
   });

@@ -17,18 +17,21 @@
   "interface": {
     "displayName": "Tripo Game Agent Superpowers",
     "shortDescription": "Superpowers-style workflow for game-ready Tripo assets.",
-    "longDescription": "Tripo Game Agent Superpowers is a local, installable agent plugin for game-ready Tripo asset workflows. It uses a Superpowers-style bootstrap skill plus composable game asset skills for intake, planning, production, readiness review, fallback, packaging, and asset memory.",
+    "longDescription": "Tripo Game Agent Superpowers is a local, installable agent plugin for game-ready Tripo asset workflows. It uses a Superpowers-style bootstrap skill plus composable game asset skills for intake, planning, production, readiness review, fallback, packaging, and asset memory. Real generation requires a local CLI, TRIPO_API_KEY, file writes under workspace/ and outputs/, and network calls to Tripo APIs.",
     "developerName": "FOX Wu",
     "category": "Productivity",
     "capabilities": [
       "Interactive",
-      "Read"
+      "Read",
+      "Write",
+      "Shell",
+      "Network"
     ],
     "websiteURL": "https://foxwzh.github.io",
     "defaultPrompt": [
-      "Run /tripo-agent ask \"Unity 里用的机甲角色，quad mesh，15k 面\"",
-      "Run /tripo-agent architecture",
-      "Explain the Tripo Game Agent Superpowers architecture"
+      "Use the Tripo Game Agent workflow to preview a Unity mech character from a natural-language goal.",
+      "Use skills/using-tripo-game-agent/SKILL.md, then run ./bin/tripo-agent ask \"Unity 里用的机甲角色，quad mesh，15k 面\" if shell execution is available.",
+      "Explain how the local CLI protects Tripo generation with inventory, planning, preflight, readiness, packaging, and memory."
     ],
     "brandColor": "#0F766E"
   }

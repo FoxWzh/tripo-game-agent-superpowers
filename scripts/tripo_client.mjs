@@ -4,6 +4,7 @@ import mime from 'mime-types';
 import { getApiKey } from './config.mjs';
 
 const DEFAULT_BASE_URL = 'https://api.tripo3d.ai';
+const DEFAULT_DOWNLOAD_EXTENSIONS = new Set(['.glb', '.gltf', '.fbx', '.obj', '.stl', '.png', '.jpg', '.jpeg', '.webp', '.zip']);
 
 export class TripoClient {
   constructor({ apiKey = getApiKey(), baseUrl = process.env.TRIPO_API_BASE_URL || DEFAULT_BASE_URL } = {}) {
@@ -80,12 +81,20 @@ export class TripoClient {
   }
 }
 
-export function collectDownloadUrls(task) {
+export function collectDownloadUrls(task, { allowedExtensions = DEFAULT_DOWNLOAD_EXTENSIONS } = {}) {
   const urls = [];
   const visit = (value, keyPath = []) => {
     if (!value) return;
     if (typeof value === 'string' && /^https?:\/\//.test(value)) {
-      urls.push({ name: keyPath.join('_') || 'asset', url: value });
+      let ext = '';
+      try {
+        ext = path.extname(new URL(value).pathname).toLowerCase();
+      } catch {
+        ext = '';
+      }
+      if (!ext || allowedExtensions.has(ext)) {
+        urls.push({ name: keyPath.join('_') || 'asset', url: value });
+      }
       return;
     }
     if (Array.isArray(value)) {

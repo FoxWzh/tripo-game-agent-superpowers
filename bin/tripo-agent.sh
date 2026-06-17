@@ -23,7 +23,7 @@ Usage:
   tripo-agent deep-check [--engine Unity]
   tripo-agent inspect
   tripo-agent package-asset [--engine unity]
-  tripo-agent run --prompt "<游戏资产需求>" --input assets/ref.png [--engine Unity] [--format FBX] [--yes]
+  tripo-agent run --prompt "<游戏资产需求>" --input assets/ref.png [--engine Unity] [--format FBX] [--yes] [--accept-risk]
   tripo-agent run --prompt "<游戏资产需求>" --front assets/f.png --back assets/b.png [--left assets/l.png --right assets/r.png]
   tripo-agent ask "<游戏资产需求>"
   tripo-agent memory [list|show <asset_id>]
@@ -192,6 +192,8 @@ package_command() {
     -x "tripo-game-agent-superpowers/.git/*" \
     -x "tripo-game-agent-superpowers/node_modules/*" \
     -x "tripo-game-agent-superpowers/workspace/*.json" \
+    -x "tripo-game-agent-superpowers/workspace/*.md" \
+    -x "tripo-game-agent-superpowers/workspace/asset_memory/*" \
     -x "tripo-game-agent-superpowers/outputs/*" \
     -x "tripo-game-agent-superpowers/assets/*" \
     -x "tripo-game-agent-superpowers/.env" \
@@ -254,19 +256,24 @@ memory_command() {
 run_command() {
   local args=("$@")
   local auto_yes="false"
+  local accept_risk="false"
   for arg in "${args[@]}"; do
     if [[ "$arg" == "--yes" || "$arg" == "-y" ]]; then
       auto_yes="true"
+    fi
+    if [[ "$arg" == "--accept-risk" ]]; then
+      accept_risk="true"
     fi
   done
 
   local input_args=()
   local engine_args=()
   local convert_args=()
-  local conversion_format=""
   local preflight_args=()
   local inventory_args=()
   local plan_args=()
+  local inventory_file="$ROOT/workspace/input_inventory.json"
+  local run_tier="Standard"
   local i=0
   require_value() {
     local flag="$1"
@@ -294,6 +301,9 @@ run_command() {
         require_value "${args[$i]}" "${args[$((i+1))]:-}"
         preflight_args+=("${args[$i]}" "${args[$((i+1))]}")
         plan_args+=("${args[$i]}" "${args[$((i+1))]}")
+        if [[ "${args[$i]}" == "--tier" ]]; then
+          run_tier="${args[$((i+1))]}"
+        fi
         i=$((i+2))
         ;;
       --prompt)
@@ -302,7 +312,7 @@ run_command() {
         plan_args+=("${args[$i]}" "${args[$((i+1))]}")
         i=$((i+2))
         ;;
-      --yes|-y)
+      --yes|-y|--accept-risk)
         i=$((i+1))
         ;;
       --engine)
@@ -314,7 +324,6 @@ run_command() {
         ;;
       --format)
         require_value "${args[$i]}" "${args[$((i+1))]:-}"
-        conversion_format="${args[$((i+1))]}"
         convert_args+=("${args[$i]}" "${args[$((i+1))]}")
         i=$((i+2))
         ;;
@@ -339,7 +348,7 @@ run_command() {
   (cd "$ROOT" && node scripts/doctor.mjs)
 
   set +e
-  (cd "$ROOT" && node scripts/inventory_game_asset.mjs "${inventory_args[@]}")
+  (cd "$ROOT" && node scripts/inventory_game_asset.mjs "${inventory_args[@]}" --out "$inventory_file")
   local inventory_code=$?
   set -e
   if [[ $inventory_code -eq 2 ]]; then
@@ -349,15 +358,25 @@ run_command() {
     exit "$inventory_code"
   fi
 
-  (cd "$ROOT" && node scripts/plan_game_asset.mjs "${plan_args[@]}")
+  (cd "$ROOT" && node scripts/plan_game_asset.mjs "${plan_args[@]}" --inventory "$inventory_file")
 
   set +e
+  preflight_args+=("--inventory" "$inventory_file")
+  if [[ "$accept_risk" == "true" ]]; then
+    preflight_args+=("--strict-user-gates" "--accept-risk")
+  else
+    preflight_args+=("--strict-user-gates")
+  fi
   (cd "$ROOT" && node scripts/preflight_game_asset.mjs "${preflight_args[@]}")
   local preflight_code=$?
   set -e
   if [[ $preflight_code -eq 2 ]]; then
     echo "Preflight found blocking issues. Fix them before creating a Tripo task."
     exit 2
+  elif [[ $preflight_code -eq 3 ]]; then
+    echo "Preflight found high-value missing inputs or user-choice gates."
+    echo "Review workspace/preflight_report.md. Add the requested inputs or re-run with --accept-risk after user approval."
+    exit 3
   elif [[ $preflight_code -ne 0 ]]; then
     exit "$preflight_code"
   fi
@@ -382,17 +401,37 @@ run_command() {
   fi
 
   (cd "$ROOT" && node scripts/generate_game_asset.mjs "${input_args[@]}")
+
+  case "$(printf '%s' "$run_tier" | tr '[:upper:]' '[:lower:]')" in
+    draft)
+      (cd "$ROOT" && node scripts/inspect_game_asset.mjs)
+      echo "Draft tier complete: generated and inspected local outputs. Re-run with --tier Standard or --tier Full for conversion, packaging, and memory."
+      return
+      ;;
+    standard|full)
+      ;;
+    *)
+      echo "Unknown --tier $run_tier. Use Draft, Standard, or Full." >&2
+      exit 2
+      ;;
+  esac
+
   if [[ ! " ${args[*]} " =~ " --no-convert " ]]; then
     set +e
-    if [[ -n "$conversion_format" ]]; then
-      (cd "$ROOT" && node scripts/convert_model.mjs --format "$conversion_format" "${convert_args[@]}")
-    else
-      (cd "$ROOT" && node scripts/convert_model.mjs "${convert_args[@]}")
-    fi
+    (cd "$ROOT" && node scripts/convert_model.mjs "${convert_args[@]}")
     local convert_code=$?
     set -e
     if [[ $convert_code -ne 0 ]]; then
       echo "Conversion failed; continuing with downloaded source model as fallback."
+    fi
+  fi
+  if [[ "$(printf '%s' "$run_tier" | tr '[:upper:]' '[:lower:]')" == "full" ]] && (cd "$ROOT" && node -e "const fs=require('fs');const p='workspace/production_plan.json';const plan=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):{};process.exit(plan.rig_route&&plan.rig_route.required?0:1)"); then
+    set +e
+    (cd "$ROOT" && node scripts/rig_model.mjs --preset "$(cd "$ROOT" && node -e "const fs=require('fs');const plan=JSON.parse(fs.readFileSync('workspace/production_plan.json','utf8'));process.stdout.write(plan.rig_route?.preset||'unity-humanoid')")")
+    local rig_code=$?
+    set -e
+    if [[ $rig_code -ne 0 ]]; then
+      echo "Rig precheck failed; continuing with static asset package and readiness warnings."
     fi
   fi
   (cd "$ROOT" && node scripts/inspect_game_asset.mjs)

@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { ensureDirs, workspaceDir, readJson, writeJson, parseArgs } from './config.mjs';
 import { inferBrief, planForBrief } from './plan_game_asset.mjs';
 import { PRICING_SOURCE_URL } from './pricing.mjs';
@@ -7,6 +5,8 @@ import { PRICING_SOURCE_URL } from './pricing.mjs';
 function detectIntentGaps(brief, args) {
   const gaps = [];
   const prompt = args.prompt || '';
+  const hasPolyInPrompt = /(\d+(?:\.\d+)?)\s*(k|千|万)\s*(faces?|面|tris?|triangles?|多边形|poly|polys)?/i.test(prompt)
+    || /(\d+(?:\.\d+)?)\s*(faces?|面|tris?|triangles?|多边形|poly|polys)/i.test(prompt);
   if (!args.engine && !/\b(Unity|Unreal|Roblox|Godot|UE)\b/i.test(prompt)) {
     gaps.push('target game engine');
   }
@@ -16,7 +16,7 @@ function detectIntentGaps(brief, args) {
   if (brief.asset_type === 'character' && !args['rig-preset']) {
     gaps.push('rig target: Unity Humanoid, UE Manny, custom, or none');
   }
-  if (!args['poly-budget']) {
+  if (!args['poly-budget'] && !hasPolyInPrompt) {
     gaps.push('runtime poly budget');
   }
   return gaps;
@@ -39,9 +39,40 @@ function highValueInputs(brief, args) {
   return items;
 }
 
+function inventoryFromCurrentArgs(args, prompt) {
+  const views = {};
+  for (const view of ['front', 'back', 'left', 'right']) {
+    if (args[view]) views[view] = { path: args[view], exists: true, supported: true };
+  }
+  const viewCount = Object.keys(views).length;
+  const inputMode = viewCount >= 2 && views.front
+    ? 'user_multiview'
+    : args.input || args['input-url']
+      ? 'single_image'
+      : prompt
+        ? 'text_only'
+        : 'missing_input';
+  return {
+    input_mode: inputMode,
+    input: args.input || args['input-url'] ? { path: args.input || args['input-url'], exists: true, supported: true } : null,
+    views,
+    view_strategy: {
+      strategy: inputMode === 'user_multiview'
+        ? 'use_user_multiview'
+        : inputMode === 'single_image'
+          ? 'ask_user_for_views_or_generate_multiview'
+          : inputMode === 'text_only'
+            ? 'text_to_model_or_generate_views_first'
+            : 'block_until_input_exists'
+    }
+  };
+}
+
 function renderMarkdown({ prompt, brief, plan, gaps, inputs }) {
   const estimate = plan.credit_estimate;
-  const blockers = gaps.filter((gap) => gap.includes('reference'));
+  const isTextOnly = plan.model_route.task_type === 'text_to_model';
+  const blockers = isTextOnly ? [] : gaps.filter((gap) => gap.includes('reference'));
+  const engineAssumed = gaps.includes('target game engine');
   const lines = [
     '# Tripo Game Agent Preview',
     '',
@@ -50,7 +81,7 @@ function renderMarkdown({ prompt, brief, plan, gaps, inputs }) {
     '## Interpreted Asset Brief',
     '',
     `- Asset type: ${brief.asset_type}`,
-    `- Engine: ${brief.engine}`,
+    `- Engine: ${brief.engine}${engineAssumed ? ' (assumed; confirm before generation)' : ''}`,
     `- Runtime format: ${brief.format}`,
     `- Poly budget: ${brief.poly_budget}`,
     `- Rig required: ${brief.rig_required ? 'yes' : 'no'}`,
@@ -80,7 +111,9 @@ function renderMarkdown({ prompt, brief, plan, gaps, inputs }) {
     '## Next Step',
     blockers.length
       ? '- Add a reference image, multiview images, or an existing model before running preflight.'
-      : `- Run: ./bin/tripo-agent preflight --input assets/<reference>.png --engine ${brief.engine}`,
+      : isTextOnly
+        ? `- Text-to-model is available but high risk for game assets. Run: ./bin/tripo-agent run --prompt "${prompt}" --engine ${brief.engine}, then approve or add --accept-risk after preflight.`
+        : `- Run: ./bin/tripo-agent preflight --input assets/<reference>.png --engine ${brief.engine}`,
     ''
   ];
   return `${lines.join('\n')}\n`;
@@ -102,8 +135,9 @@ async function main() {
     assetType: args['asset-type'],
     polyBudget: args['poly-budget']
   });
-  const inventoryPath = args.inventory || path.join(workspaceDir, 'input_inventory.json');
-  const inventory = fs.existsSync(inventoryPath) ? readJson(inventoryPath, null) : null;
+  const inventory = args.inventory
+    ? readJson(args.inventory, null)
+    : inventoryFromCurrentArgs(args, prompt);
   const plan = planForBrief(brief, {
     inventory,
     tier: args.tier || 'Standard',
@@ -128,9 +162,11 @@ async function main() {
     missing_or_worth_confirming: gaps,
     high_value_inputs: inputs,
     risk_points: plan.risk_points,
-    next_action: gaps.some((gap) => gap.includes('reference'))
+    next_action: gaps.some((gap) => gap.includes('reference')) && plan.model_route.task_type !== 'text_to_model'
       ? 'Ask user for reference image, multiview images, or existing model before preflight.'
-      : `Run preflight before generation: ./bin/tripo-agent preflight --input assets/<reference>.png --engine ${brief.engine}`
+      : plan.model_route.task_type === 'text_to_model'
+        ? `Text-to-model is available but high risk. Run guarded workflow and require user approval before paid generation.`
+        : `Run preflight before generation: ./bin/tripo-agent preflight --input assets/<reference>.png --engine ${brief.engine}`
   };
 
   const outPath = args.out || path.join(workspaceDir, 'preview_report.json');
