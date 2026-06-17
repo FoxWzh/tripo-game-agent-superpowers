@@ -1,0 +1,16 @@
+{
+  "name": "tripo-game-agent-superpowers",
+  "version": "0.1.0",
+  "description": "A Superpowers-style local plugin for Tripo game-asset workflows.",
+  "author": {
+    "name": "FOX Wu"
+  },
+  "homepage": "https://github.com/FoxWzh/tripo-game-agent-superpowers",
+  "keywords": [
+    "tripo",
+    "superpowers",
+    "game-assets",
+    "3d-generation",
+    "agent-plugin"
+  ]
+}

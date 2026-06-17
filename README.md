@@ -24,23 +24,37 @@ Use this path when you want Claude Code or Codex to guide the workflow through s
 
 ### Claude Code
 
-Install the slash command:
+Install the Claude Code plugin from the GitHub marketplace manifest:
 
 ```bash
-./bin/tripo-agent install
+claude plugin marketplace add FoxWzh/tripo-game-agent-superpowers
+claude plugin install tripo-game-agent-superpowers@tripo-game-agent-superpowers
 ```
 
-Then open Claude Code from this repository root and run:
+Then open Claude Code and check `/plugin`. The installed command is namespaced by plugin:
+
+```text
+/tripo-game-agent-superpowers:tripo-agent ask "Unity-ready mech character, quad mesh, 15k faces, rigged"
+/tripo-game-agent-superpowers:tripo-agent architecture
+/tripo-game-agent-superpowers:tripo-agent about
+```
+
+For local development without installing from the marketplace, run Claude Code with this repo as a plugin directory:
+
+```bash
+claude --plugin-dir .
+```
+
+In that mode the command is available directly:
 
 ```text
 /tripo-agent ask "Unity-ready mech character, quad mesh, 15k faces, rigged"
-/tripo-agent architecture
-/tripo-agent about
 ```
 
-The slash command delegates to the local Superpowers-style files:
+The plugin delegates to the local Superpowers-style files:
 
 ```text
+.claude-plugin/plugin.json
 CLAUDE.md
 commands/tripo-agent.md
 skills/using-tripo-game-agent/SKILL.md
@@ -50,10 +64,16 @@ skills/game-asset-*/SKILL.md
 For real generation, put reference files under `assets/` and ask the agent to run the guarded workflow:
 
 ```text
-/tripo-agent run --prompt "Unity-ready mech character, quad mesh, 15k faces, rigged" --input assets/mecha.png --engine Unity
+/tripo-game-agent-superpowers:tripo-agent run --prompt "Unity-ready mech character, quad mesh, 15k faces, rigged" --input assets/mecha.png --engine Unity
 ```
 
 The agent should run intake, input inventory, planning, preflight, human confirmation, production, readiness review, and packaging in order.
+
+If your Claude Code version does not support plugins, install the legacy slash command instead:
+
+```bash
+./bin/tripo-agent install-legacy-command
+```
 
 ### Codex
 
@@ -199,7 +219,8 @@ Generated views are opened for confirmation. Do not proceed to 3D until the user
 | --- | --- |
 | `setup` | Configure API key, check dependencies, install npm packages after confirmation. |
 | `doctor` | Check local runtime prerequisites. |
-| `install` | Install the Claude Code `/tripo-agent` slash command. |
+| `install` | Install the Claude Code plugin through the marketplace manifest. |
+| `install-legacy-command` | Install only the legacy `/tripo-agent` slash command; it will not appear in the plugin list. |
 | `ask "<goal>"` | Parse a game-asset goal without spending credits. |
 | `architecture` | Explain the Superpowers-style skill architecture. |
 | `inventory ...` | Inspect available single-image, multiview, text, or existing-model inputs. |

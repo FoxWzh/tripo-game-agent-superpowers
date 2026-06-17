@@ -1,0 +1,28 @@
+{
+  "name": "tripo-game-agent-superpowers",
+  "metadata": {
+    "description": "Marketplace for the Tripo Game Agent Superpowers Claude Code plugin."
+  },
+  "owner": {
+    "name": "FOX Wu"
+  },
+  "plugins": [
+    {
+      "name": "tripo-game-agent-superpowers",
+      "source": "./",
+      "description": "A Superpowers-style local plugin for Tripo game-asset workflows.",
+      "author": {
+        "name": "FOX Wu"
+      },
+      "homepage": "https://github.com/FoxWzh/tripo-game-agent-superpowers",
+      "repository": "https://github.com/FoxWzh/tripo-game-agent-superpowers",
+      "keywords": [
+        "tripo",
+        "superpowers",
+        "game-assets",
+        "3d-generation",
+        "agent-plugin"
+      ]
+    }
+  ]
+}

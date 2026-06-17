@@ -12,6 +12,7 @@ Usage:
   tripo-agent setup
   tripo-agent doctor
   tripo-agent install
+  tripo-agent install-legacy-command
   tripo-agent inventory [--input assets/front.png|--front assets/front.png --back assets/back.png]
   tripo-agent plan --prompt "<游戏资产需求>" [--input assets/ref.png]
   tripo-agent synthesize-views --input assets/front.png
@@ -59,17 +60,51 @@ EOF
 }
 
 install_command() {
+  if ! command -v claude >/dev/null 2>&1; then
+    cat <<EOF
+未找到 Claude Code CLI。
+
+请先安装 Claude Code，然后运行：
+  claude plugin marketplace add FoxWzh/tripo-game-agent-superpowers
+  claude plugin install tripo-game-agent-superpowers@tripo-game-agent-superpowers
+
+也可以安装 legacy slash command：
+  ./bin/tripo-agent install-legacy-command
+EOF
+    exit 1
+  fi
+
+  claude plugin validate "$ROOT"
+  claude plugin marketplace add FoxWzh/tripo-game-agent-superpowers
+  claude plugin install tripo-game-agent-superpowers@tripo-game-agent-superpowers
+
+  cat <<EOF
+已安装 Claude Code plugin:
+  tripo-game-agent-superpowers@tripo-game-agent-superpowers
+
+在 Claude Code 中可检查：
+  /plugin
+  /tripo-game-agent-superpowers:tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面"
+
+本地开发调试也可以直接运行：
+  claude --plugin-dir "$ROOT"
+
+如果你的 Claude Code 版本不支持 plugin marketplace，仍可安装传统 slash command：
+  ./bin/tripo-agent install-legacy-command
+EOF
+}
+
+install_legacy_command() {
   mkdir -p "$HOME/.claude/commands"
   cp "$ROOT/commands/tripo-agent.md" "$HOME/.claude/commands/tripo-agent.md"
   cat <<EOF
-已安装 Claude Code slash command:
+已安装 legacy Claude Code slash command:
   $HOME/.claude/commands/tripo-agent.md
 
 现在可以在 Claude Code 中运行：
   /tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面"
 
-如果你使用 Codex plugin UI，也可以导入整个目录：
-  $ROOT
+注意：legacy slash command 不会出现在 Claude Code 的 plugin 列表里。
 EOF
 }
 
@@ -539,6 +574,9 @@ case "$COMMAND" in
     ;;
   install)
     install_command
+    ;;
+  install-legacy-command)
+    install_legacy_command
     ;;
   setup)
     setup_command

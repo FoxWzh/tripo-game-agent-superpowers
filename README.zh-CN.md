@@ -24,23 +24,37 @@ cd tripo-game-agent-superpowers
 
 ### Claude Code
 
-安装 slash command：
+从 GitHub marketplace manifest 安装 Claude Code plugin：
 
 ```bash
-./bin/tripo-agent install
+claude plugin marketplace add FoxWzh/tripo-game-agent-superpowers
+claude plugin install tripo-game-agent-superpowers@tripo-game-agent-superpowers
 ```
 
-然后从这个仓库根目录打开 Claude Code，运行：
+然后打开 Claude Code，用 `/plugin` 检查插件是否已安装。安装后的命令会带 plugin namespace：
+
+```text
+/tripo-game-agent-superpowers:tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼"
+/tripo-game-agent-superpowers:tripo-agent architecture
+/tripo-game-agent-superpowers:tripo-agent about
+```
+
+如果是本地开发，不想从 marketplace 安装，可以从仓库根目录直接加载 plugin：
+
+```bash
+claude --plugin-dir .
+```
+
+这种模式下可以直接使用：
 
 ```text
 /tripo-agent ask "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼"
-/tripo-agent architecture
-/tripo-agent about
 ```
 
-slash command 会委托给本地 Superpowers 风格文件：
+插件会委托给本地 Superpowers 风格文件：
 
 ```text
+.claude-plugin/plugin.json
 CLAUDE.md
 commands/tripo-agent.md
 skills/using-tripo-game-agent/SKILL.md
@@ -50,10 +64,16 @@ skills/game-asset-*/SKILL.md
 如果要真实生成，把参考文件放到 `assets/`，然后让 agent 运行带保护的工作流：
 
 ```text
-/tripo-agent run --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" --input assets/mecha.png --engine Unity
+/tripo-game-agent-superpowers:tripo-agent run --prompt "Unity 里用的机甲角色，quad mesh，15k 面，带骨骼" --input assets/mecha.png --engine Unity
 ```
 
 Agent 应按顺序执行意图理解、输入盘点、方案规划、preflight、用户确认、生产、可用性检查和打包。
+
+如果你的 Claude Code 版本不支持 plugins，可以安装 legacy slash command：
+
+```bash
+./bin/tripo-agent install-legacy-command
+```
 
 ### Codex
 
@@ -199,7 +219,8 @@ TRIPO_AGENT_NO_OPEN=1 ./bin/tripo-agent run ...
 | --- | --- |
 | `setup` | 配置 API key、检查依赖，并在确认后安装 npm 包。 |
 | `doctor` | 检查本地运行环境。 |
-| `install` | 安装 Claude Code `/tripo-agent` slash command。 |
+| `install` | 通过 marketplace manifest 安装 Claude Code plugin。 |
+| `install-legacy-command` | 只安装 legacy `/tripo-agent` slash command；它不会出现在 plugin 列表里。 |
 | `ask "<目标>"` | 不消耗额度地解析游戏资产目标。 |
 | `architecture` | 解释 Superpowers 风格的 skill 架构。 |
 | `inventory ...` | 检查单图、多视图、文本或已有模型输入。 |
